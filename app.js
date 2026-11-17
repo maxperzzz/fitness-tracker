@@ -1,0 +1,72 @@
+/* Configure these two values after creating your Supabase project.
+   Use the Project URL and publishable/anon key only. NEVER put service_role here. */
+const SUPABASE_URL = "https://ejnmarjkyrzvxfgnnoyf.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_lC5U4hIJqymo0Waw5Mq-mA_s6nrhyRD";
+
+const $ = (id) => document.getElementById(id);
+const configured = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("YOUR_") && !SUPABASE_ANON_KEY.includes("YOUR_");
+let db = null, currentUser = null, cache = {food:[],workouts:[],body:[],photos:[]};
+const today = () => new Date().toLocaleDateString("en-CA");
+const num = (v) => Number(v || 0);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(msg, error=false){const el=$("toast");el.textContent=msg;el.classList.remove("hidden","error");if(error)el.classList.add("error");setTimeout(()=>el.classList.add("hidden"),3200)}
+function setAuthMessage(msg){$("auth-message").textContent=msg}
+function showApp(user){currentUser=user;$("login-screen").classList.add("hidden");$("app").classList.remove("hidden");$("connection-label").textContent="เชื่อมต่อแล้ว";$("today-label").textContent=new Date().toLocaleDateString("th-TH",{weekday:"long",year:"numeric",month:"long",day:"numeric"});$("date-chip").textContent=today();loadAll()}
+function showLogin(){$("app").classList.add("hidden");$("login-screen").classList.remove("hidden")}
+async function auth(action){
+  if(!db){setAuthMessage("ยังไม่ได้ตั้งค่า Supabase URL และ Publishable Key ใน app.js");return}
+  const email=$("email").value.trim(),password=$("password").value;
+  if(!email||!password){setAuthMessage("กรุณากรอกอีเมลและรหัสผ่าน");return}
+  setAuthMessage("กำลังดำเนินการ...");
+  const result=action==="in"?await db.auth.signInWithPassword({email,password}):await db.auth.signUp({email,password});
+  if(result.error){setAuthMessage(result.error.message);return}
+  if(action==="up"&&!result.data.session){setAuthMessage("สมัครแล้ว กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชี");return}
+  if(result.data.user)showApp(result.data.user);
+}
+function navigate(page){document.querySelectorAll(".page").forEach(x=>x.classList.add("hidden"));$("page-"+page).classList.remove("hidden");document.querySelectorAll(".nav-item").forEach(x=>x.classList.toggle("active",x.dataset.page===page));const names={dashboard:"ภาพรวมวันนี้",food:"บันทึกอาหาร",workout:"ออกกำลังกาย",body:"ข้อมูลร่างกาย",analytics:"วิเคราะห์ผล",photos:"รูปภาพ",backup:"สำรองข้อมูล"};$("page-title").textContent=names[page]}
+async function rows(table){const {data,error}=await db.from(table).select("*").order("created_at",{ascending:false}).limit(500);if(error)throw error;return data||[]}
+async function loadAll(){
+ try{
+  [cache.food,cache.workouts,cache.body,cache.photos]=await Promise.all([rows("food_logs"),rows("workout_logs"),rows("body_metrics"),rows("photos")]);
+  cache.photos = await Promise.all(cache.photos.map(async photo => {
+    const {data,error} = await db.storage.from("fitness-photos").createSignedUrl(photo.storage_path, 3600);
+    return {...photo, signed_url: error ? "" : data.signedUrl};
+  }));
+  renderAll();
+ } catch(e){toast("โหลดข้อมูลไม่สำเร็จ: "+e.message,true)}
+}
+function renderAll(){
+ const d=today(),foods=cache.food.filter(x=>x.logged_on===d),k=foods.reduce((a,x)=>a+num(x.calories),0),p=foods.reduce((a,x)=>a+num(x.protein_g),0),c=foods.reduce((a,x)=>a+num(x.carbs_g),0),f=foods.reduce((a,x)=>a+num(x.fat_g),0);
+ $("kcal-total").innerHTML=`${Math.round(k).toLocaleString()} <small>kcal</small>`;$("protein-total").innerHTML=`${p.toFixed(1)} <small>g</small>`;$("carbs-total").innerHTML=`${c.toFixed(1)} <small>g</small>`;$("fat-total").innerHTML=`${f.toFixed(1)} <small>g</small>`;
+ $("kcal-progress").style.width=Math.min(100,k/2000*100)+"%";$("protein-progress").style.width=Math.min(100,p/140*100)+"%";
+ $("today-food").innerHTML=foods.length?foods.map(x=>`<div class="list-row">${esc(x.name)} <span class="muted">${num(x.calories)} kcal · ${num(x.protein_g)}g protein</span></div>`).join(""):"ยังไม่มีรายการอาหาร";
+ const w=cache.workouts.filter(x=>x.workout_on===d);$("today-workout").innerHTML=w.length?w.map(x=>`<div class="list-row">${esc(x.name)} <span class="muted">${esc(x.activity_type)} · ${num(x.duration_min)} นาที</span></div>`).join(""):"ยังไม่มีรายการออกกำลังกาย";
+ $("food-list").innerHTML=tableHtml(cache.food,[["logged_on","วันที่"],["meal","มื้อ"],["name","อาหาร"],["calories","kcal"],["protein_g","โปรตีน g"]]);
+ $("workout-list").innerHTML=tableHtml(cache.workouts,[["workout_on","วันที่"],["activity_type","ประเภท"],["name","กิจกรรม"],["duration_min","นาที"],["intensity","ความหนัก"]]);
+ $("body-list").innerHTML=tableHtml(cache.body,[["measured_on","วันที่"],["weight_kg","น้ำหนัก kg"],["body_fat_pct","Body Fat %"],["waist_cm","รอบเอว cm"]]);
+ $("analytics-food").textContent=cache.food.length;$("analytics-workouts").textContent=cache.workouts.length;$("analytics-minutes").innerHTML=cache.workouts.reduce((a,x)=>a+num(x.duration_min),0)+' <small>min</small>';
+ $("weight-trend").innerHTML=cache.body.length?cache.body.slice(0,12).reverse().map(x=>`${esc(x.measured_on)} — ${num(x.weight_kg)} kg${x.body_fat_pct?` / ${num(x.body_fat_pct)}%`:''}`).join("<br>"):"เพิ่มข้อมูลร่างกายเพื่อเริ่มดูแนวโน้ม";
+ $("photo-list").innerHTML=cache.photos.length?cache.photos.map(x=>`<div class="photo-card"><img src="${esc(x.signed_url||"")}" alt=""><small>${esc(x.category)} · ${esc(x.taken_on)}</small><small>${esc(x.caption||"")}</small></div>`).join(""):"ยังไม่มีรูปภาพ";
+}
+function tableHtml(data,cols){if(!data.length)return "ยังไม่มีข้อมูล";return `<table><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join("")}</tr></thead><tbody>${data.slice(0,30).map(r=>`<tr>${cols.map(c=>`<td>${esc(r[c[0]]??"—")}</td>`).join("")}</tr>`).join("")}</tbody></table>`}
+function formObject(form){return Object.fromEntries(new FormData(form).entries())}
+async function insert(table,obj){const {error}=await db.from(table).insert({...obj,user_id:currentUser.id});if(error)throw error;toast("บันทึกข้อมูลแล้ว");await loadAll()}
+$("sign-in").addEventListener("click",()=>auth("in"));$("sign-up").addEventListener("click",()=>auth("up"));
+$("sign-out").addEventListener("click",async()=>{await db.auth.signOut();currentUser=null;showLogin()});
+$("nav").addEventListener("click",e=>{const b=e.target.closest("[data-page]");if(b)navigate(b.dataset.page)});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-go]");if(b)navigate(b.dataset.go)});
+$("food-form").addEventListener("submit",async e=>{e.preventDefault();try{const x=formObject(e.target);await insert("food_logs",{logged_on:today(),meal:x.meal,name:x.name,serving:x.serving,calories:num(x.calories),protein_g:num(x.protein),carbs_g:num(x.carbs),fat_g:num(x.fat),notes:x.notes});e.target.reset()}catch(err){toast(err.message,true)}});
+$("workout-form").addEventListener("submit",async e=>{e.preventDefault();try{const x=formObject(e.target);await insert("workout_logs",{workout_on:today(),activity_type:x.type,name:x.name,duration_min:num(x.duration),intensity:x.intensity,notes:x.notes});e.target.reset()}catch(err){toast(err.message,true)}});
+$("body-form").addEventListener("submit",async e=>{e.preventDefault();try{const x=formObject(e.target);await insert("body_metrics",{measured_on:x.measured_on,weight_kg:num(x.weight_kg),body_fat_pct:x.body_fat_pct?num(x.body_fat_pct):null,waist_cm:x.waist_cm?num(x.waist_cm):null,notes:x.notes});e.target.reset()}catch(err){toast(err.message,true)}});
+$("photo-form").addEventListener("submit",async e=>{e.preventDefault();try{const x=formObject(e.target),file=e.target.elements.photo.files[0];if(!file)throw new Error("กรุณาเลือกรูป");if(file.size>8*1024*1024)throw new Error("รูปใหญ่เกิน 8MB กรุณาย่อรูปก่อน");const ext=(file.name.split(".").pop()||"jpg").toLowerCase(),path=`${currentUser.id}/${Date.now()}.${ext}`;const up=await db.storage.from("fitness-photos").upload(path,file,{contentType:file.type,upsert:false});if(up.error)throw up.error;const ins=await db.from("photos").insert({user_id:currentUser.id,category:x.category,taken_on:x.taken_on,caption:x.caption,storage_path:path});if(ins.error)throw ins.error;toast("อัปโหลดรูปแล้ว");e.target.reset();await loadAll()}catch(err){toast(err.message,true)}});
+$("backup-json").addEventListener("click",()=>download("fitness-backup-"+today()+".json",JSON.stringify({exported_at:new Date().toISOString(),food_logs:cache.food,workout_logs:cache.workouts,body_metrics:cache.body,photos:cache.photos.map(({signed_url,...x})=>x)},null,2),"application/json"));
+$("backup-csv").addEventListener("click",()=>{for(const [name,data] of Object.entries({food_logs:cache.food,workout_logs:cache.workouts,body_metrics:cache.body,photos:cache.photos})){const cols=[...new Set(data.flatMap(Object.keys))];const csv=[cols.join(","),...data.map(r=>cols.map(c=>`"${String(r[c]??"").replace(/"/g,'""')}"`).join(","))].join("\n");download(`${name}-${today()}.csv`,"\ufeff"+csv,"text/csv;charset=utf-8")}});
+function download(name,content,type){const a=document.createElement("a"),url=URL.createObjectURL(new Blob([content],{type}));a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);$("backup-message").textContent="สร้างไฟล์สำรองแล้ว กรุณาเก็บไว้ในที่ปลอดภัย"}
+async function init(){
+ $("body-form").elements.measured_on.value=today();$("photo-form").elements.taken_on.value=today();
+ if(!configured){setAuthMessage("ขั้นต่อไป: ใส่ Supabase Project URL และ Publishable Key ใน app.js");$("connection-label").textContent="รอตั้งค่า Supabase";return}
+ db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+ const {data:{session}}=await db.auth.getSession();if(session)showApp(session.user);
+ db.auth.onAuthStateChange((_event,session)=>{if(session)showApp(session.user);else showLogin()});
+}
+init();

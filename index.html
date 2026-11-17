@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101318">
+  <title>Fitness Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div id="login-screen" class="login-wrap">
+    <section class="login-card">
+      <div class="brand-mark">FT</div>
+      <p class="eyebrow">PERSONAL HEALTH SYSTEM</p>
+      <h1>Fitness Tracker</h1>
+      <p class="muted">บันทึกอาหาร การฝึก และพัฒนาการของร่างกาย</p>
+      <label>อีเมล<input id="email" type="email" autocomplete="email" placeholder="you@example.com"></label>
+      <label>รหัสผ่าน<input id="password" type="password" autocomplete="current-password" placeholder="อย่างน้อย 8 ตัวอักษร"></label>
+      <div class="login-actions">
+        <button id="sign-in" class="primary">เข้าสู่ระบบ</button>
+        <button id="sign-up" class="secondary">สมัครสมาชิก</button>
+      </div>
+      <p id="auth-message" class="hint">ต้องตั้งค่า Supabase ก่อนจึงจะใช้งานได้</p>
+    </section>
+  </div>
+
+  <div id="app" class="app hidden">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark">FT</div><div><strong>FITNESS</strong><small>TRACKER</small></div></div>
+      <nav id="nav">
+        <button class="nav-item active" data-page="dashboard">▦ <span>ภาพรวม</span></button>
+        <button class="nav-item" data-page="food">＋ <span>บันทึกอาหาร</span></button>
+        <button class="nav-item" data-page="workout">↗ <span>ออกกำลังกาย</span></button>
+        <button class="nav-item" data-page="body">⌁ <span>ข้อมูลร่างกาย</span></button>
+        <button class="nav-item" data-page="analytics">▥ <span>วิเคราะห์ผล</span></button>
+        <button class="nav-item" data-page="photos">▧ <span>รูปภาพ</span></button>
+        <button class="nav-item" data-page="backup">⇩ <span>สำรองข้อมูล</span></button>
+      </nav>
+      <div class="sidebar-bottom"><span class="status-dot"></span><span id="connection-label">ยังไม่เชื่อมต่อ</span><button id="sign-out" class="text-button">ออกจากระบบ</button></div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar"><div><p class="eyebrow" id="today-label"></p><h1 id="page-title">ภาพรวมวันนี้</h1></div><div class="avatar">ME</div></header>
+      <section id="page-dashboard" class="page">
+        <div class="welcome"><div><p class="eyebrow">DAILY PERFORMANCE</p><h2>วันนี้ทำได้แค่ไหน?</h2><p class="muted">บันทึกให้สม่ำเสมอ แล้วค่อยดูแนวโน้มระยะยาว</p></div><div class="date-chip" id="date-chip"></div></div>
+        <div class="stat-grid">
+          <article class="stat-card"><span>พลังงานที่ได้รับ</span><strong id="kcal-total">0 <small>kcal</small></strong><div class="progress"><i id="kcal-progress"></i></div><small class="muted" id="kcal-target">เป้าหมาย 2,000 kcal</small></article>
+          <article class="stat-card"><span>โปรตีน</span><strong id="protein-total">0 <small>g</small></strong><div class="progress green"><i id="protein-progress"></i></div><small class="muted" id="protein-target">เป้าหมาย 140 g</small></article>
+          <article class="stat-card"><span>คาร์โบไฮเดรต</span><strong id="carbs-total">0 <small>g</small></strong><small class="muted">รวมจากอาหารวันนี้</small></article>
+          <article class="stat-card"><span>ไขมัน</span><strong id="fat-total">0 <small>g</small></strong><small class="muted">รวมจากอาหารวันนี้</small></article>
+        </div>
+        <div class="content-grid">
+          <article class="panel"><div class="panel-head"><h3>อาหารวันนี้</h3><button class="small-button" data-go="food">+ เพิ่มอาหาร</button></div><div id="today-food" class="empty">ยังไม่มีรายการอาหาร</div></article>
+          <article class="panel"><div class="panel-head"><h3>การฝึกวันนี้</h3><button class="small-button" data-go="workout">+ เพิ่มการฝึก</button></div><div id="today-workout" class="empty">ยังไม่มีรายการออกกำลังกาย</div></article>
+        </div>
+      </section>
+
+      <section id="page-food" class="page hidden">
+        <div class="panel form-panel"><h3>เพิ่มรายการอาหาร</h3><form id="food-form" class="form-grid">
+          <label class="wide">ชื่ออาหาร<input name="name" required placeholder="เช่น ข้าวกะเพราหมูสับ"></label>
+          <label>มื้ออาหาร<select name="meal"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select></label>
+          <label>ปริมาณ / หมายเหตุ<input name="serving" placeholder="เช่น 1 จาน / 250 g"></label>
+          <label>พลังงาน (kcal)<input name="calories" type="number" min="0" step="1" value="0"></label>
+          <label>โปรตีน (g)<input name="protein" type="number" min="0" step=".1" value="0"></label>
+          <label>คาร์บ (g)<input name="carbs" type="number" min="0" step=".1" value="0"></label>
+          <label>ไขมัน (g)<input name="fat" type="number" min="0" step=".1" value="0"></label>
+          <label class="wide">บันทึกเพิ่มเติม<textarea name="notes" rows="2" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)"></textarea></label>
+          <button class="primary wide" type="submit">บันทึกอาหาร</button>
+        </form></div>
+        <article class="panel"><h3>รายการอาหารล่าสุด</h3><div id="food-list" class="table-wrap empty">ยังไม่มีข้อมูล</div></article>
+      </section>
+
+      <section id="page-workout" class="page hidden">
+        <div class="panel form-panel"><h3>บันทึกการออกกำลังกาย</h3><form id="workout-form" class="form-grid">
+          <label>ประเภท<select name="type"><option>Weight Training</option><option>Cardio</option><option>Ping Pong</option><option>Other</option></select></label>
+          <label>ชื่อกิจกรรม<input name="name" required placeholder="เช่น Push Day / เดินเร็ว"></label>
+          <label>ระยะเวลา (นาที)<input name="duration" type="number" min="0" value="60"></label>
+          <label>ความหนัก<select name="intensity"><option>ปานกลาง</option><option>เบา</option><option>หนัก</option></select></label>
+          <label class="wide">รายละเอียด / ท่าที่เล่น<textarea name="notes" rows="3" placeholder="เช่น Bench Press 3x10, Row 3x12"></textarea></label>
+          <button class="primary wide" type="submit">บันทึกการฝึก</button>
+        </form></div>
+        <article class="panel"><h3>ประวัติการฝึก</h3><div id="workout-list" class="empty">ยังไม่มีข้อมูล</div></article>
+      </section>
+
+      <section id="page-body" class="page hidden">
+        <div class="panel form-panel"><h3>บันทึกข้อมูลร่างกาย</h3><form id="body-form" class="form-grid">
+          <label>น้ำหนัก (kg)<input name="weight_kg" type="number" step=".1" min="0" required></label>
+          <label>Body Fat (%)<input name="body_fat_pct" type="number" step=".1" min="0" max="100"></label>
+          <label>รอบเอว (cm)<input name="waist_cm" type="number" step=".1" min="0"></label>
+          <label>วันที่<input name="measured_on" type="date" required></label>
+          <label class="wide">หมายเหตุ<textarea name="notes" rows="2"></textarea></label>
+          <button class="primary wide" type="submit">บันทึกข้อมูลร่างกาย</button>
+        </form></div>
+        <article class="panel"><h3>ประวัติร่างกาย</h3><div id="body-list" class="empty">ยังไม่มีข้อมูล</div></article>
+      </section>
+
+      <section id="page-analytics" class="page hidden">
+        <div class="stat-grid"><article class="stat-card"><span>รายการอาหารทั้งหมด</span><strong id="analytics-food">0</strong></article><article class="stat-card"><span>จำนวนครั้งที่ฝึก</span><strong id="analytics-workouts">0</strong></article><article class="stat-card"><span>เวลาฝึกสะสม</span><strong id="analytics-minutes">0 <small>min</small></strong></article></div>
+        <article class="panel"><h3>แนวโน้มน้ำหนัก</h3><div id="weight-trend" class="empty">เพิ่มข้อมูลร่างกายเพื่อเริ่มดูแนวโน้ม</div></article>
+        <article class="panel"><h3>หมายเหตุ</h3><p class="muted">กราฟเชิงลึกและค่าเฉลี่ยรายสัปดาห์จะเพิ่มในขั้นถัดไป เมื่อเชื่อมฐานข้อมูลและมีข้อมูลจริงแล้ว</p></article>
+      </section>
+
+      <section id="page-photos" class="page hidden">
+        <div class="panel form-panel"><h3>เพิ่มรูปภาพ</h3><form id="photo-form" class="form-grid">
+          <label>หมวดรูป<select name="category"><option>Food</option><option>Workout</option><option>Body Progress</option></select></label>
+          <label>วันที่<input name="taken_on" type="date" required></label>
+          <label class="wide">เลือกรูป<input name="photo" type="file" accept="image/*" required></label>
+          <label class="wide">คำอธิบาย<input name="caption" placeholder="เช่น มื้อกลางวัน / หลังเวท"></label>
+          <button class="primary wide" type="submit">อัปโหลดรูปภาพ</button>
+        </form><p class="hint">รูปจะถูกบีบอัดก่อนอัปโหลด และจัดเก็บใน Supabase Storage แบบส่วนตัว</p></div>
+        <article class="panel"><h3>รูปภาพล่าสุด</h3><div id="photo-list" class="photo-grid empty">ยังไม่มีรูปภาพ</div></article>
+      </section>
+
+      <section id="page-backup" class="page hidden">
+        <article class="panel"><h3>สำรองข้อมูลด้วยตนเอง</h3><p class="muted">ดาวน์โหลดข้อมูลบัญชีของคุณเป็น JSON หรือ CSV เพื่อเก็บไว้ในเครื่อง</p><div class="backup-actions"><button id="backup-json" class="primary">ดาวน์โหลด JSON ทั้งหมด</button><button id="backup-csv" class="secondary">ดาวน์โหลด CSV แยกตาราง</button></div><p id="backup-message" class="hint"></p></article>
+      </section>
+      <div id="toast" class="toast hidden"></div>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
