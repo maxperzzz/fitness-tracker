@@ -42,7 +42,7 @@ function renderAll(){
  $("kcal-progress").style.width=Math.min(100,k/2000*100)+"%";$("protein-progress").style.width=Math.min(100,p/140*100)+"%";
  $("today-food").innerHTML=foods.length?foods.map(x=>`<div class="list-row">${esc(x.name)} <span class="muted">${num(x.calories)} kcal · ${num(x.protein_g)}g protein</span></div>`).join(""):"ยังไม่มีรายการอาหาร";
  const w=cache.workouts.filter(x=>x.workout_on===d);$("today-workout").innerHTML=w.length?w.map(x=>`<div class="list-row">${esc(x.name)} <span class="muted">${esc(x.activity_type)} · ${num(x.duration_min)} นาที</span></div>`).join(""):"ยังไม่มีรายการออกกำลังกาย";
- $("food-list").innerHTML=tableHtml(cache.food,[["logged_on","วันที่"],["meal","มื้อ"],["name","อาหาร"],["calories","kcal"],["protein_g","โปรตีน g"]]);
+ $("food-list").innerHTML=foodTableHtml(cache.food);
  $("workout-list").innerHTML=tableHtml(cache.workouts,[["workout_on","วันที่"],["activity_type","ประเภท"],["name","กิจกรรม"],["duration_min","นาที"],["intensity","ความหนัก"]]);
  $("body-list").innerHTML=tableHtml(cache.body,[["measured_on","วันที่"],["weight_kg","น้ำหนัก kg"],["body_fat_pct","Body Fat %"],["waist_cm","รอบเอว cm"]]);
  $("photo-list").innerHTML=cache.photos.length?cache.photos.map(x=>`<div class="photo-card"><img src="${esc(x.signed_url||"")}" alt=""><small>${esc(x.category)} · ${esc(x.taken_on)}</small><small>${esc(x.caption||"")}</small></div>`).join(""):"ยังไม่มีรูปภาพ";
@@ -104,7 +104,21 @@ function renderAnalytics(){
  const sortedTypes=Object.entries(workouts.reduce((a,x)=>{const key=x.activity_type||"Other";a[key]=(a[key]||0)+num(x.duration_min);return a},{})).sort((a,b)=>b[1]-a[1]);
  $("training-summary").textContent=sortedTypes.length?sortedTypes.map(x=>x[0]+": "+x[1]+" นาที").join(" · "):"ยังไม่มีการฝึกในช่วงเวลานี้";
 }
-function tableHtml(data,cols){if(!data.length)return "ยังไม่มีข้อมูล";return `<table><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join("")}</tr></thead><tbody>${data.slice(0,30).map(r=>`<tr>${cols.map(c=>`<td>${esc(r[c[0]]??"—")}</td>`).join("")}</tr>`).join("")}</tbody></table>`}
+function tableHtml(data,cols){
+ if(!data.length)return "ยังไม่มีรายการอาหาร";
+ const cols=[["logged_on","วันที่"],["meal","มื้อ"],["name","อาหาร"],["calories","kcal"],["protein_g","โปรตีน g"]];
+ return `<table><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join("")}<th>จัดการ</th></tr></thead><tbody>${data.slice(0,30).map(r=>`<tr>${cols.map(c=>`<td>${esc(r[c[0]]??"—")}</td>`).join("")}<td><button type="button" class="secondary" data-delete-food="${esc(r.id)}" style="padding:6px 10px;font-size:12px;color:#ff8b8b;border-color:#754040">ลบ</button></td></tr>`).join("")}</tbody></table>`;
+}
+async function deleteFoodLog(id){
+ if(!id||!currentUser)return;
+ if(!confirm("ยืนยันลบรายการอาหารนี้ใช่ไหม? การลบไม่สามารถย้อนกลับได้"))return;
+ try{
+  const {error}=await db.from("food_logs").delete().eq("id",id).eq("user_id",currentUser.id);
+  if(error)throw error;
+  toast("ลบรายการอาหารแล้ว");
+  await loadAll();
+ }catch(err){toast("ลบไม่สำเร็จ: "+err.message,true)}
+}{if(!data.length)return "ยังไม่มีข้อมูล";return `<table><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join("")}</tr></thead><tbody>${data.slice(0,30).map(r=>`<tr>${cols.map(c=>`<td>${esc(r[c[0]]??"—")}</td>`).join("")}</tr>`).join("")}</tbody></table>`}
 function formObject(form){return Object.fromEntries(new FormData(form).entries())}
 async function insert(table,obj){const {error}=await db.from(table).insert({...obj,user_id:currentUser.id});if(error)throw error;toast("บันทึกข้อมูลแล้ว");await loadAll()}
 $("sign-in").addEventListener("click",()=>auth("in"));$("sign-up").addEventListener("click",()=>auth("up"));
@@ -117,6 +131,7 @@ document.querySelector(".range-switch").addEventListener("click",e=>{
  renderAnalytics();
 });
 document.addEventListener("click",e=>{const b=e.target.closest("[data-go]");if(b)navigate(b.dataset.go)});
+$("food-list").addEventListener("click",e=>{const b=e.target.closest("[data-delete-food]");if(b)deleteFoodLog(b.dataset.deleteFood)});
 $("food-form").addEventListener("submit",async e=>{e.preventDefault();try{const x=formObject(e.target);await insert("food_logs",{logged_on:today(),meal:x.meal,name:x.name,serving:x.serving,calories:num(x.calories),protein_g:num(x.protein),carbs_g:num(x.carbs),fat_g:num(x.fat),notes:x.notes});e.target.reset()}catch(err){toast(err.message,true)}});
 $("workout-form").addEventListener("submit",async e=>{e.preventDefault();try{const x=formObject(e.target);await insert("workout_logs",{workout_on:today(),activity_type:x.type,name:x.name,duration_min:num(x.duration),intensity:x.intensity,notes:x.notes});e.target.reset()}catch(err){toast(err.message,true)}});
 $("body-form").addEventListener("submit",async e=>{e.preventDefault();try{const x=formObject(e.target);await insert("body_metrics",{measured_on:x.measured_on,weight_kg:num(x.weight_kg),body_fat_pct:x.body_fat_pct?num(x.body_fat_pct):null,waist_cm:x.waist_cm?num(x.waist_cm):null,notes:x.notes});e.target.reset()}catch(err){toast(err.message,true)}});
