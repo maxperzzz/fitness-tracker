@@ -37,10 +37,18 @@ async function loadAll(){
  } catch(e){toast("โหลดข้อมูลไม่สำเร็จ: "+e.message,true)}
 }
 function renderAll(){
- const d=today(),foods=cache.food.filter(x=>x.logged_on===d),k=foods.reduce((a,x)=>a+num(x.calories),0),p=foods.reduce((a,x)=>a+num(x.protein_g),0),c=foods.reduce((a,x)=>a+num(x.carbs_g),0),f=foods.reduce((a,x)=>a+num(x.fat_g),0);
+ const d=today(),foods=cache.food.filter(x=>x.logged_on===d);
+const nutrition=nutritionForDay(d);
+const k=nutrition.kcal??0,p=nutrition.protein??0;
+const c=foods.reduce((a,x)=>a+num(x.carbs_g),0);
+const f=foods.reduce((a,x)=>a+num(x.fat_g),0);
  $("kcal-total").innerHTML=`${Math.round(k).toLocaleString()} <small>kcal</small>`;$("protein-total").innerHTML=`${p.toFixed(1)} <small>g</small>`;$("carbs-total").innerHTML=`${c.toFixed(1)} <small>g</small>`;$("fat-total").innerHTML=`${f.toFixed(1)} <small>g</small>`;
  $("kcal-progress").style.width=Math.min(100,k/2000*100)+"%";$("protein-progress").style.width=Math.min(100,p/140*100)+"%";
- $("today-food").innerHTML=foods.length?foods.map(x=>`<div class="list-row">${esc(x.name)} <span class="muted">${num(x.calories)} kcal · ${num(x.protein_g)}g protein</span></div>`).join(""):"ยังไม่มีรายการอาหาร";
+$("today-food").innerHTML=foods.length
+ ? foods.map(x=>`<div class="list-row">${esc(x.name)} <span class="muted">${num(x.calories)} kcal · ${num(x.protein_g)}g protein</span></div>`).join("")
+ : nutrition.source==="estimated"
+   ? `<div class="list-row muted">ไม่มีรายการอาหารวันนี้ · ใช้ค่าประมาณจาก ${esc(nutrition.sourceDate)}</div>`
+   : "ยังไม่มีรายการอาหาร";
  const w=cache.workouts.filter(x=>x.workout_on===d);$("today-workout").innerHTML=w.length?w.map(x=>`<div class="list-row">${esc(x.name)} <span class="muted">${esc(x.activity_type)} · ${num(x.duration_min)} นาที</span></div>`).join(""):"ยังไม่มีรายการออกกำลังกาย";
  $("food-list").innerHTML=foodTableHtml(cache.food);
  $("workout-list").innerHTML=tableHtml(cache.workouts,[["workout_on","วันที่"],["activity_type","ประเภท"],["name","กิจกรรม"],["duration_min","นาที"],["intensity","ความหนัก"]]);
@@ -48,7 +56,39 @@ function renderAll(){
  $("photo-list").innerHTML=cache.photos.length?cache.photos.map(x=>`<div class="photo-card"><img src="${esc(x.signed_url||"")}" alt=""><small>${esc(x.category)} · ${esc(x.taken_on)}</small><small>${esc(x.caption||"")}</small></div>`).join(""):"ยังไม่มีรูปภาพ";
 }
 function dateKey(date){const y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,"0"),d=String(date.getDate()).padStart(2,"0");return `${y}-${m}-${d}`}
-function shiftDate(daysAgo){const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-daysAgo);return dateKey(d)}
+function shiftDate(daysAgo)function nutritionForDay(dayKey){
+ const rows=cache.food.filter(x=>x.logged_on===dayKey);
+
+ if(rows.length){
+  return {
+   kcal:rows.reduce((s,x)=>s+num(x.calories),0),
+   protein:rows.reduce((s,x)=>s+num(x.protein_g),0),
+   source:"actual",
+   sourceDate:dayKey
+  };
+ }
+
+ const dates=[...new Set(
+  cache.food
+   .filter(x=>x.logged_on<dayKey)
+   .map(x=>x.logged_on)
+ )].sort();
+
+ const sourceDate=dates[dates.length-1];
+
+ if(!sourceDate){
+  return {kcal:null,protein:null,source:"none"};
+ }
+
+ const previous=cache.food.filter(x=>x.logged_on===sourceDate);
+
+ return {
+  kcal:previous.reduce((s,x)=>s+num(x.calories),0),
+  protein:previous.reduce((s,x)=>s+num(x.protein_g),0),
+  source:"estimated",
+  sourceDate
+ };
+}{const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-daysAgo);return dateKey(d)}
 function destroyChart(key){if(analyticsCharts[key]){analyticsCharts[key].destroy();delete analyticsCharts[key]}}
 function renderAnalytics(){
  const days=analyticsRange,start=shiftDate(days-1),end=today();
@@ -73,9 +113,9 @@ function renderAnalytics(){
  for(let i=days-1;i>=0;i--){
   const key=shiftDate(i);
   labels.push(new Date(key+"T12:00:00").toLocaleDateString("th-TH",{day:"numeric",month:"short"}));
-  const dayRows=foods.filter(x=>x.logged_on===key);
-  dailyKcal.push(dayRows.reduce((s,x)=>s+num(x.calories),0));
-  dailyProtein.push(dayRows.reduce((s,x)=>s+num(x.protein_g),0));
+ const nutrition=nutritionForDay(key);
+dailyKcal.push(nutrition.kcal);
+dailyProtein.push(nutrition.protein);
  }
  if(window.Chart){
   Chart.defaults.color="#9ba7b7";Chart.defaults.borderColor="rgba(145,160,180,.13)";Chart.defaults.font.family="Inter, IBM Plex Sans Thai, sans-serif";
