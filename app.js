@@ -6,6 +6,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_lC5U4hIJqymo0Waw5Mq-mA_s6nrhyRD";
 const $ = (id) => document.getElementById(id);
 const configured = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("YOUR_") && !SUPABASE_ANON_KEY.includes("YOUR_");
 let db = null, currentUser = null, cache = {food:[],workouts:[],body:[],photos:[]};
+let analyticsRange = 7, analyticsCharts = {};
 const today = () => new Date().toLocaleDateString("en-CA");
 const num = (v) => Number(v || 0);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -23,7 +24,7 @@ async function auth(action){
   if(action==="up"&&!result.data.session){setAuthMessage("สมัครแล้ว กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชี");return}
   if(result.data.user)showApp(result.data.user);
 }
-function navigate(page){document.querySelectorAll(".page").forEach(x=>x.classList.add("hidden"));$("page-"+page).classList.remove("hidden");document.querySelectorAll(".nav-item").forEach(x=>x.classList.toggle("active",x.dataset.page===page));const names={dashboard:"ภาพรวมวันนี้",food:"บันทึกอาหาร",workout:"ออกกำลังกาย",body:"ข้อมูลร่างกาย",analytics:"วิเคราะห์ผล",photos:"รูปภาพ",backup:"สำรองข้อมูล"};$("page-title").textContent=names[page]}
+function navigate(page){document.querySelectorAll(".page").forEach(x=>x.classList.add("hidden"));$("page-"+page).classList.remove("hidden");document.querySelectorAll(".nav-item").forEach(x=>x.classList.toggle("active",x.dataset.page===page));const names={dashboard:"ภาพรวมวันนี้",food:"บันทึกอาหาร",workout:"ออกกำลังกาย",body:"ข้อมูลร่างกาย",analytics:"วิเคราะห์ผล",photos:"รูปภาพ",backup:"สำรองข้อมูล"};$("page-title").textContent=names[page];if(page==="analytics")renderAnalytics()}
 async function rows(table){const {data,error}=await db.from(table).select("*").order("created_at",{ascending:false}).limit(500);if(error)throw error;return data||[]}
 async function loadAll(){
  try{
@@ -44,9 +45,64 @@ function renderAll(){
  $("food-list").innerHTML=tableHtml(cache.food,[["logged_on","วันที่"],["meal","มื้อ"],["name","อาหาร"],["calories","kcal"],["protein_g","โปรตีน g"]]);
  $("workout-list").innerHTML=tableHtml(cache.workouts,[["workout_on","วันที่"],["activity_type","ประเภท"],["name","กิจกรรม"],["duration_min","นาที"],["intensity","ความหนัก"]]);
  $("body-list").innerHTML=tableHtml(cache.body,[["measured_on","วันที่"],["weight_kg","น้ำหนัก kg"],["body_fat_pct","Body Fat %"],["waist_cm","รอบเอว cm"]]);
- $("analytics-food").textContent=cache.food.length;$("analytics-workouts").textContent=cache.workouts.length;$("analytics-minutes").innerHTML=cache.workouts.reduce((a,x)=>a+num(x.duration_min),0)+' <small>min</small>';
- $("weight-trend").innerHTML=cache.body.length?cache.body.slice(0,12).reverse().map(x=>`${esc(x.measured_on)} — ${num(x.weight_kg)} kg${x.body_fat_pct?` / ${num(x.body_fat_pct)}%`:''}`).join("<br>"):"เพิ่มข้อมูลร่างกายเพื่อเริ่มดูแนวโน้ม";
  $("photo-list").innerHTML=cache.photos.length?cache.photos.map(x=>`<div class="photo-card"><img src="${esc(x.signed_url||"")}" alt=""><small>${esc(x.category)} · ${esc(x.taken_on)}</small><small>${esc(x.caption||"")}</small></div>`).join(""):"ยังไม่มีรูปภาพ";
+}
+function dateKey(date){const y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,"0"),d=String(date.getDate()).padStart(2,"0");return `${y}-${m}-${d}`}
+function shiftDate(daysAgo){const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-daysAgo);return dateKey(d)}
+function destroyChart(key){if(analyticsCharts[key]){analyticsCharts[key].destroy();delete analyticsCharts[key]}}
+function renderAnalytics(){
+ const days=analyticsRange,start=shiftDate(days-1),end=today();
+ const foods=cache.food.filter(x=>x.logged_on>=start&&x.logged_on<=end);
+ const workouts=cache.workouts.filter(x=>x.workout_on>=start&&x.workout_on<=end);
+ const body=cache.body.filter(x=>x.measured_on>=start&&x.measured_on<=end).sort((a,b)=>a.measured_on.localeCompare(b.measured_on));
+ const foodDays=[...new Set(foods.map(x=>x.logged_on))];
+ const protein=foods.reduce((s,x)=>s+num(x.protein_g),0);
+ const avgKcal=foodDays.length?foods.reduce((s,x)=>s+num(x.calories),0)/foodDays.length:0;
+ const avgProtein=foodDays.length?protein/foodDays.length:0;
+ const totalMinutes=workouts.reduce((s,x)=>s+num(x.duration_min),0);
+ const latestBody=[...cache.body].sort((a,b)=>b.measured_on.localeCompare(a.measured_on))[0];
+ $("an-kcal").textContent=foodDays.length?Math.round(avgKcal).toLocaleString():"—";
+ $("an-protein").textContent=foodDays.length?avgProtein.toFixed(1):"—";
+ $("an-sessions").textContent=workouts.length;
+ $("an-minutes").textContent=totalMinutes.toLocaleString()+" นาทีรวม";
+ $("an-kcal-foot").textContent=foods.length+" รายการอาหาร · "+foodDays.length+" วันที่บันทึก";
+ $("an-protein-foot").textContent="รวม "+protein.toFixed(1)+" g ในช่วงที่เลือก";
+ $("an-weight").textContent=latestBody?num(latestBody.weight_kg).toFixed(1):"—";
+ $("an-weight-foot").textContent=latestBody?("อัปเดต "+latestBody.measured_on+(latestBody.body_fat_pct!=null?" · ไขมัน "+num(latestBody.body_fat_pct).toFixed(1)+"%":"")):"ยังไม่มีข้อมูลร่างกาย";
+ const labels=[],dailyKcal=[],dailyProtein=[];
+ for(let i=days-1;i>=0;i--){
+  const key=shiftDate(i);
+  labels.push(new Date(key+"T12:00:00").toLocaleDateString("th-TH",{day:"numeric",month:"short"}));
+  const dayRows=foods.filter(x=>x.logged_on===key);
+  dailyKcal.push(dayRows.reduce((s,x)=>s+num(x.calories),0));
+  dailyProtein.push(dayRows.reduce((s,x)=>s+num(x.protein_g),0));
+ }
+ if(window.Chart){
+  Chart.defaults.color="#9ba7b7";Chart.defaults.borderColor="rgba(145,160,180,.13)";Chart.defaults.font.family="Inter, IBM Plex Sans Thai, sans-serif";
+  destroyChart("nutrition");
+  analyticsCharts.nutrition=new Chart($("nutrition-chart"),{type:"line",data:{labels,datasets:[
+   {label:"Calories (kcal)",data:dailyKcal,borderColor:"#8bd7a8",backgroundColor:"rgba(139,215,168,.12)",fill:true,tension:.35,yAxisID:"y",pointRadius:2},
+   {label:"Protein (g)",data:dailyProtein,borderColor:"#b8a4ff",tension:.35,yAxisID:"y1",pointRadius:2}
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{position:"bottom",labels:{usePointStyle:true,boxWidth:7,padding:18}}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,title:{display:true,text:"kcal"}},y1:{beginAtZero:true,position:"right",grid:{drawOnChartArea:false},title:{display:true,text:"g"}}}}});
+  const macro=[foods.reduce((s,x)=>s+num(x.protein_g)*4,0),foods.reduce((s,x)=>s+num(x.carbs_g)*4,0),foods.reduce((s,x)=>s+num(x.fat_g)*9,0)];
+  destroyChart("macro");
+  analyticsCharts.macro=new Chart($("macro-chart"),{type:"doughnut",data:{labels:["Protein","Carbs","Fat"],datasets:[{data:macro,backgroundColor:["#8bd7a8","#b8a4ff","#e9b875"],borderColor:"#191e26",borderWidth:4,hoverOffset:5}]},options:{responsive:true,maintainAspectRatio:false,cutout:"68%",plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.label+": "+Math.round(ctx.raw)+" kcal"}}}}});
+  $("macro-legend").innerHTML=[["Protein",macro[0],"#8bd7a8"],["Carbs",macro[1],"#b8a4ff"],["Fat",macro[2],"#e9b875"]].map(item=>`<span><i style="background:${item[2]}"></i>${item[0]} <b>${Math.round(item[1])} kcal</b></span>`).join("");
+  destroyChart("body");
+  analyticsCharts.body=new Chart($("body-chart"),{type:"line",data:{labels:body.map(x=>new Date(x.measured_on+"T12:00:00").toLocaleDateString("th-TH",{day:"numeric",month:"short"})),datasets:[
+   {label:"Weight (kg)",data:body.map(x=>num(x.weight_kg)),borderColor:"#8bd7a8",backgroundColor:"rgba(139,215,168,.12)",fill:true,tension:.3,yAxisID:"y",spanGaps:true},
+   {label:"Body Fat (%)",data:body.map(x=>x.body_fat_pct==null?null:num(x.body_fat_pct)),borderColor:"#b8a4ff",tension:.3,yAxisID:"y1",spanGaps:true}
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{position:"bottom",labels:{usePointStyle:true,boxWidth:7}}},scales:{x:{grid:{display:false}},y:{title:{display:true,text:"kg"}},y1:{position:"right",grid:{drawOnChartArea:false},title:{display:true,text:"%"}}}}});
+  const types={};workouts.forEach(x=>{const key=x.activity_type||"Other";types[key]=(types[key]||0)+num(x.duration_min)});
+  destroyChart("training");
+  analyticsCharts.training=new Chart($("training-chart"),{type:"bar",data:{labels:Object.keys(types).length?Object.keys(types):["ยังไม่มีข้อมูล"],datasets:[{label:"Minutes",data:Object.keys(types).length?Object.values(types):[0],backgroundColor:["#8bd7a8","#b8a4ff","#e9b875","#78b7d6"],borderRadius:7,maxBarThickness:44}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,title:{display:true,text:"นาที"}}}}});
+ }else{["nutrition","macro","body","training"].forEach(destroyChart)}
+ if(body.length){
+  const first=body[0],last=body[body.length-1],delta=num(last.weight_kg)-num(first.weight_kg);
+  $("body-summary").textContent="น้ำหนักเปลี่ยน "+(delta>0?"+":"")+delta.toFixed(1)+" kg ในช่วงที่เลือก · "+body.length+" ครั้งที่วัด";
+ }else{$("body-summary").textContent="ไม่มีข้อมูลร่างกายในช่วงเวลานี้"}
+ const sortedTypes=Object.entries(workouts.reduce((a,x)=>{const key=x.activity_type||"Other";a[key]=(a[key]||0)+num(x.duration_min);return a},{})).sort((a,b)=>b[1]-a[1]);
+ $("training-summary").textContent=sortedTypes.length?sortedTypes.map(x=>x[0]+": "+x[1]+" นาที").join(" · "):"ยังไม่มีการฝึกในช่วงเวลานี้";
 }
 function tableHtml(data,cols){if(!data.length)return "ยังไม่มีข้อมูล";return `<table><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join("")}</tr></thead><tbody>${data.slice(0,30).map(r=>`<tr>${cols.map(c=>`<td>${esc(r[c[0]]??"—")}</td>`).join("")}</tr>`).join("")}</tbody></table>`}
 function formObject(form){return Object.fromEntries(new FormData(form).entries())}
@@ -54,6 +110,12 @@ async function insert(table,obj){const {error}=await db.from(table).insert({...o
 $("sign-in").addEventListener("click",()=>auth("in"));$("sign-up").addEventListener("click",()=>auth("up"));
 $("sign-out").addEventListener("click",async()=>{await db.auth.signOut();currentUser=null;showLogin()});
 $("nav").addEventListener("click",e=>{const b=e.target.closest("[data-page]");if(b)navigate(b.dataset.page)});
+document.querySelector(".range-switch").addEventListener("click",e=>{
+ const b=e.target.closest("[data-range]");if(!b)return;
+ analyticsRange=Number(b.dataset.range);
+ document.querySelectorAll(".range-button").forEach(x=>x.classList.toggle("active",x===b));
+ renderAnalytics();
+});
 document.addEventListener("click",e=>{const b=e.target.closest("[data-go]");if(b)navigate(b.dataset.go)});
 $("food-form").addEventListener("submit",async e=>{e.preventDefault();try{const x=formObject(e.target);await insert("food_logs",{logged_on:today(),meal:x.meal,name:x.name,serving:x.serving,calories:num(x.calories),protein_g:num(x.protein),carbs_g:num(x.carbs),fat_g:num(x.fat),notes:x.notes});e.target.reset()}catch(err){toast(err.message,true)}});
 $("workout-form").addEventListener("submit",async e=>{e.preventDefault();try{const x=formObject(e.target);await insert("workout_logs",{workout_on:today(),activity_type:x.type,name:x.name,duration_min:num(x.duration),intensity:x.intensity,notes:x.notes});e.target.reset()}catch(err){toast(err.message,true)}});
