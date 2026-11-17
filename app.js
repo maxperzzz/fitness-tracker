@@ -105,20 +105,26 @@ function renderAnalytics(){
  $("training-summary").textContent=sortedTypes.length?sortedTypes.map(x=>x[0]+": "+x[1]+" นาที").join(" · "):"ยังไม่มีการฝึกในช่วงเวลานี้";
 }
 function tableHtml(data,cols){
+ if(!data.length)return "ยังไม่มีข้อมูล";
+ return `<table><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join("")}</tr></thead><tbody>${data.slice(0,30).map(r=>`<tr>${cols.map(c=>`<td>${esc(r[c[0]]??"—")}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+}
+
+function foodTableHtml(data){
  if(!data.length)return "ยังไม่มีรายการอาหาร";
  const cols=[["logged_on","วันที่"],["meal","มื้อ"],["name","อาหาร"],["calories","kcal"],["protein_g","โปรตีน g"]];
- return `<table><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join("")}<th>จัดการ</th></tr></thead><tbody>${data.slice(0,30).map(r=>`<tr>${cols.map(c=>`<td>${esc(r[c[0]]??"—")}</td>`).join("")}<td><button type="button" class="secondary" data-delete-food="${esc(r.id)}" style="padding:6px 10px;font-size:12px;color:#ff8b8b;border-color:#754040">ลบ</button></td></tr>`).join("")}</tbody></table>`;
+ return `<table><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join("")}<th>จัดการ</th></tr></thead><tbody>${data.slice(0,30).map(r=>`<tr>${cols.map(c=>`<td>${esc(r[c[0]]??"—")}</td>`).join("")}<td><button type="button" class="secondary" data-delete-food="${esc(r.id)}">ลบ</button></td></tr>`).join("")}</tbody></table>`;
 }
+
 async function deleteFoodLog(id){
  if(!id||!currentUser)return;
- if(!confirm("ยืนยันลบรายการอาหารนี้ใช่ไหม? การลบไม่สามารถย้อนกลับได้"))return;
+ if(!confirm("ยืนยันลบรายการอาหารนี้ใช่ไหม?"))return;
  try{
   const {error}=await db.from("food_logs").delete().eq("id",id).eq("user_id",currentUser.id);
   if(error)throw error;
   toast("ลบรายการอาหารแล้ว");
   await loadAll();
  }catch(err){toast("ลบไม่สำเร็จ: "+err.message,true)}
-}{if(!data.length)return "ยังไม่มีข้อมูล";return `<table><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join("")}</tr></thead><tbody>${data.slice(0,30).map(r=>`<tr>${cols.map(c=>`<td>${esc(r[c[0]]??"—")}</td>`).join("")}</tr>`).join("")}</tbody></table>`}
+}
 function formObject(form){return Object.fromEntries(new FormData(form).entries())}
 async function insert(table,obj){const {error}=await db.from(table).insert({...obj,user_id:currentUser.id});if(error)throw error;toast("บันทึกข้อมูลแล้ว");await loadAll()}
 $("sign-in").addEventListener("click",()=>auth("in"));$("sign-up").addEventListener("click",()=>auth("up"));
