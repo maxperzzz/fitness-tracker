@@ -443,7 +443,15 @@ function renderAnalytics() {
   const totalMinutes = workouts.reduce(
     (s, x) => s + num(x.duration_min), 0
   );
+// รวม Active Calories จากประวัติการฝึก
+const workoutsWithCalories = workouts.filter(
+  x => x.calories_active != null &&
+       Number.isFinite(Number(x.calories_active))
+);
 
+const totalActiveKcal = workoutsWithCalories.reduce(
+  (s, x) => s + num(x.calories_active), 0
+);
   const latestBody = [...cache.body].sort(
     (a, b) => b.measured_on.localeCompare(a.measured_on)
   )[0];
@@ -455,7 +463,17 @@ function renderAnalytics() {
     foodDays.length ? avgProtein.toFixed(1) : "—";
 
   $("an-sessions").textContent = workouts.length;
+if ($("an-active-kcal")) {
+  $("an-active-kcal").textContent = workoutsWithCalories.length
+    ? Math.round(totalActiveKcal).toLocaleString()
+    : "—";
+}
 
+if ($("an-active-kcal-foot")) {
+  $("an-active-kcal-foot").textContent =
+    workoutsWithCalories.length + " ครั้งที่มีข้อมูลแคลอรี จาก " +
+    workouts.length + " ครั้งที่ฝึก";
+}
   $("an-minutes").textContent =
     totalMinutes.toLocaleString() + " นาทีรวม";
 
