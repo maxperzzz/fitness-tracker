@@ -56,6 +56,60 @@ $("today-food").innerHTML=foods.length
  $("photo-list").innerHTML=cache.photos.length?cache.photos.map(x=>`<div class="photo-card"><img src="${esc(x.signed_url||"")}" alt=""><small>${esc(x.category)} · ${esc(x.taken_on)}</small><small>${esc(x.caption||"")}</small></div>`).join(""):"ยังไม่มีรูปภาพ";
 }
 function dateKey(date){const y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,"0"),d=String(date.getDate()).padStart(2,"0");return `${y}-${m}-${d}`}
+function dateKey(date){
+ const y=date.getFullYear();
+ const m=String(date.getMonth()+1).padStart(2,"0");
+ const d=String(date.getDate()).padStart(2,"0");
+ return `${y}-${m}-${d}`;
+}
+
+function shiftDate(daysAgo){
+ const d=new Date();
+ d.setHours(12,0,0,0);
+ d.setDate(d.getDate()-daysAgo);
+ return dateKey(d);
+}
+
+function nutritionForDay(dayKey){
+ const rows=cache.food.filter(x=>x.logged_on===dayKey);
+
+ if(rows.length){
+  return {
+   kcal:rows.reduce((s,x)=>s+num(x.calories),0),
+   protein:rows.reduce((s,x)=>s+num(x.protein_g),0),
+   source:"actual",
+   sourceDate:dayKey
+  };
+ }
+
+ const dates=[...new Set(
+  cache.food
+   .filter(x=>x.logged_on<dayKey)
+   .map(x=>x.logged_on)
+ )].sort();
+
+ const sourceDate=dates[dates.length-1];
+
+ if(!sourceDate){
+  return {kcal:null,protein:null,source:"none"};
+ }
+
+ const previous=cache.food.filter(x=>x.logged_on===sourceDate);
+
+ return {
+  kcal:previous.reduce((s,x)=>s+num(x.calories),0),
+  protein:previous.reduce((s,x)=>s+num(x.protein_g),0),
+  source:"estimated",
+  sourceDate
+ };
+}
+
+function destroyChart(key){
+ if(analyticsCharts[key]){
+  analyticsCharts[key].destroy();
+  delete analyticsCharts[key];
+ }
+}
 function shiftDate(daysAgo)function nutritionForDay(dayKey){
  const rows=cache.food.filter(x=>x.logged_on===dayKey);
 
