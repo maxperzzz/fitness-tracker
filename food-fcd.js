@@ -1,8 +1,10 @@
-/* FoodCheck connector via Supabase Edge Function (CORS-safe proxy).
-   Requires deployed function named foodcheck-proxy with JWT verification enabled.
+
+/* FoodCheck connector via Supabase Edge Function.
+   Supports estimated energy when FoodCheck returns Energy = 0.
 */
 (() => {
   const SOURCE = "https://foodcheck.jocky.website/";
+
   const css = `
   #fcd-food-panel{margin-bottom:18px}
   #fcd-food-panel .fcd-row{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:12px}
@@ -19,93 +21,373 @@
   #fcd-food-panel button:disabled{opacity:.45;cursor:not-allowed}
   @media(max-width:650px){#fcd-food-panel .fcd-row{grid-template-columns:1fr}#fcd-food-panel .fcd-macros{grid-template-columns:repeat(2,1fr)}}
   `;
-  const make=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n};
-  const value=(list,regex)=>{const x=(list||[]).find(n=>regex.test(String(n.nutrient_name||"")));return x&&x.per_100g!=null&&Number.isFinite(Number(x.per_100g))?Number(x.per_100g):null};
-  const fmt=v=>v==null?"ไม่มีข้อมูล":(Number(v).toFixed(2));
+
+  const make=(tag,cls,text)=>{
+    const n=document.createElement(tag);
+    if(cls)n.className=cls;
+    if(text!==undefined)n.textContent=text;
+    return n;
+  };
+
+  const value=(list,regex)=>{
+    const x=(list||[]).find(n=>regex.test(String(n.nutrient_name||"")));
+    return x&&x.per_100g!=null&&Number.isFinite(Number(x.per_100g))
+      ?Number(x.per_100g)
+      :null;
+  };
+
+  const fmt=v=>v==null?"ไม่มีข้อมูล":Number(v).toFixed(2);
+
   async function install(){
     const page=document.getElementById("page-food");
     if(!page||document.getElementById("fcd-food-panel"))return;
-    const style=make("style");style.textContent=css;document.head.appendChild(style);
-    const panel=make("article","panel form-panel");panel.id="fcd-food-panel";
+
+    const style=make("style");
+    style.textContent=css;
+    document.head.appendChild(style);
+
+    const panel=make("article","panel form-panel");
+    panel.id="fcd-food-panel";
+
     const h=make("h3","","FoodCheck · ค้นหาอาหารจากฐานข้อมูลจริง");
     const intro=make("p","fcd-muted","ค้นหาภาษาไทย เลือกเมนู แล้วคำนวณตามน้ำหนักที่กิน โดยอ้างอิงค่าต่อ 100 กรัม");
+
     const row=make("div","fcd-row");
-    const sl=make("label","","ค้นหาอาหาร"),search=make("input");search.type="search";search.placeholder="เช่น กะเพรา, ไข่ต้ม, อกไก่";sl.append(search);
-    const wl=make("label","","น้ำหนักอาหาร (กรัม)"),weight=make("input");weight.type="number";weight.min="1";weight.step="1";weight.value="250";wl.append(weight);
-    const ml=make("label","","มื้ออาหาร"),meal=make("select");["Breakfast","Lunch","Dinner","Snack"].forEach((x,i)=>{const o=make("option","",x);if(i===1)o.selected=true;meal.append(o)});ml.append(meal);
+
+    const sl=make("label","","ค้นหาอาหาร");
+    const search=make("input");
+    search.type="search";
+    search.placeholder="เช่น กะเพรา, ไข่ต้ม, อกไก่";
+    sl.append(search);
+
+    const wl=make("label","","น้ำหนักอาหาร (กรัม)");
+    const weight=make("input");
+    weight.type="number";
+    weight.min="1";
+    weight.step="1";
+    weight.value="250";
+    wl.append(weight);
+
+    const ml=make("label","","มื้ออาหาร");
+    const meal=make("select");
+    ["Breakfast","Lunch","Dinner","Snack"].forEach((x,i)=>{
+      const o=make("option","",x);
+      if(i===1)o.selected=true;
+      meal.append(o);
+    });
+    ml.append(meal);
+
     row.append(sl,wl,ml);
-    const results=make("div","fcd-results"),preview=make("div","fcd-result fcd-muted","พิมพ์ชื่ออาหารเพื่อค้นหา"),save=make("button","primary","บันทึกลง Food Log");save.disabled=true;
-    const src=make("p","fcd-muted");src.append("แหล่งข้อมูล: ");const a=make("a","","FoodCheck");a.href=SOURCE;a.target="_blank";a.rel="noopener";src.append(a);
+
+    const results=make("div","fcd-results");
+    const preview=make("div","fcd-result fcd-muted","พิมพ์ชื่ออาหารเพื่อค้นหา");
+    const save=make("button","primary","บันทึกลง Food Log");
+    save.disabled=true;
+
+    const src=make("p","fcd-muted");
+    src.append("แหล่งข้อมูล: ");
+    const a=make("a","","FoodCheck");
+    a.href=SOURCE;
+    a.target="_blank";
+    a.rel="noopener";
+    src.append(a);
+
     const status=make("p","fcd-muted","พร้อมค้นหา");
-    panel.append(h,intro,row,results,preview,save,src,status);page.insertBefore(panel,page.firstChild);
-    let selected=null,detail=null,searchSeq=0,detailSeq=0;
+
+    panel.append(h,intro,row,results,preview,save,src,status);
+    page.insertBefore(panel,page.firstChild);
+
+    let selected=null;
+    let detail=null;
+    let searchSeq=0;
+    let detailSeq=0;
+
     async function invoke(payload){
-      if(typeof db==="undefined"||!db)throw new Error("ยังไม่ได้เชื่อมต่อ Supabase");
-      const {data,error}=await db.functions.invoke("foodcheck-proxy",{body:payload});
+      if(typeof db==="undefined"||!db){
+        throw new Error("ยังไม่ได้เชื่อมต่อ Supabase");
+      }
+
+      const {data,error}=await db.functions.invoke(
+        "foodcheck-proxy",
+        {body:payload}
+      );
+
       if(error)throw new Error(error.message||"เรียก Edge Function ไม่สำเร็จ");
       if(data?.error)throw new Error(data.error);
+
       return data;
     }
+
     function renderDetail(){
       if(!detail||!selected)return;
+
       const ns=detail.nutrients||[];
+
+      const rawKcal=value(ns,/^energy\b/i);
+      const protein=value(ns,/^protein\b/i);
+      const carbs=value(ns,/carbohydrate/i);
+      const fat=value(ns,/^fat\b/i);
+      const sodium=value(ns,/^sodium\b/i);
+
+      // ประเมินพลังงานเฉพาะเมื่อ Energy = 0
+      // และมี Macro ครบทั้ง 3 รายการ
+      const kcalEstimated=
+        rawKcal===0&&
+        protein!==null&&
+        carbs!==null&&
+        fat!==null;
+
+      const estimatedKcal=kcalEstimated
+        ?protein*4+carbs*4+fat*9
+        :null;
+
       const base={
-        kcal:value(ns,/^energy\b/i),protein:value(ns,/^protein\b/i),
-        carbs:value(ns,/carbohydrate/i),fat:value(ns,/^fat\b/i),sodium:value(ns,/^sodium\b/i)
+        kcal:rawKcal===0
+          ?(kcalEstimated?estimatedKcal:null)
+          :rawKcal,
+        protein,
+        carbs,
+        fat,
+        sodium
       };
-      const grams=Math.max(1,Number(weight.value)||1),factor=grams/100;
-      const v=Object.fromEntries(Object.entries(base).map(([k,n])=>[k,n==null?null:n*factor]));
-      preview.replaceChildren();preview.append(make("strong","",detail.food?.name_th||selected.name_th||"อาหารที่เลือก"));
+
+      const grams=Math.max(1,Number(weight.value)||1);
+      const factor=grams/100;
+
+      const v=Object.fromEntries(
+        Object.entries(base).map(([k,n])=>[
+          k,n==null?null:n*factor
+        ])
+      );
+
+      preview.replaceChildren();
+
+      preview.append(
+        make("strong","",detail.food?.name_th||selected.name_th||"อาหารที่เลือก")
+      );
+
       const grid=make("div","fcd-macros");
-      [["พลังงาน",v.kcal,"kcal"],["โปรตีน",v.protein,"g"],["คาร์บ",v.carbs,"g"],["ไขมัน",v.fat,"g"]].forEach(([label,n,unit])=>{const cell=make("div");cell.append(make("span","fcd-muted",label),make("b","",fmt(n)),make("span","fcd-muted",n==null?"":unit));grid.append(cell)});
-      preview.append(grid,make("p","fcd-muted","โซเดียม: "+fmt(v.sodium)+(v.sodium==null?"":" mg")),make("p","fcd-muted","คำนวณจาก "+grams+" กรัม · ข้อมูลต้นทางต่อ 100 กรัม"));
-      const missing=Object.entries(base).filter(([,n])=>n==null).map(([k])=>({kcal:"พลังงาน",protein:"โปรตีน",carbs:"คาร์โบไฮเดรต",fat:"ไขมัน",sodium:"โซเดียม"}[k]));
-      if(missing.length)preview.append(make("p","fcd-muted","ไม่มีค่าในแหล่งข้อมูล: "+missing.join(", ")+" (ไม่เติมค่าประมาณ)"));
-      detail._base=base;save.disabled=base.kcal==null;
+
+      [
+        [kcalEstimated?"พลังงาน (ประมาณ)":"พลังงาน",v.kcal,"kcal"],
+        ["โปรตีน",v.protein,"g"],
+        ["คาร์บ",v.carbs,"g"],
+        ["ไขมัน",v.fat,"g"]
+      ].forEach(([label,n,unit])=>{
+        const cell=make("div");
+        cell.append(
+          make("span","fcd-muted",label),
+          make("b","",fmt(n)),
+          make("span","fcd-muted",n==null?"":unit)
+        );
+        grid.append(cell);
+      });
+
+      preview.append(
+        grid,
+        make("p","fcd-muted","โซเดียม: "+fmt(v.sodium)+(v.sodium==null?"":" mg")),
+        make("p","fcd-muted","คำนวณจาก "+grams+" กรัม · ข้อมูลต้นทางต่อ 100 กรัม")
+      );
+
+      if(kcalEstimated){
+        preview.append(
+          make("p","fcd-muted","⚠ พลังงานประมาณ: คำนวณจาก Protein × 4 + Carbs × 4 + Fat × 9 เนื่องจาก FoodCheck ส่งพลังงานเป็น 0")
+        );
+      }
+
+      const missing=Object.entries(base)
+        .filter(([,n])=>n==null)
+        .map(([k])=>({
+          kcal:"พลังงาน",
+          protein:"โปรตีน",
+          carbs:"คาร์โบไฮเดรต",
+          fat:"ไขมัน",
+          sodium:"โซเดียม"
+        }[k]));
+
+      if(missing.length){
+        preview.append(
+          make("p","fcd-muted","ไม่มีค่าในแหล่งข้อมูล: "+missing.join(", ")+" (ไม่เติมค่าประมาณ)")
+        );
+      }
+
+      detail._base=base;
+      detail._kcalEstimated=kcalEstimated;
+      save.disabled=base.kcal==null;
     }
+
     async function choose(item){
-      selected=item;detail=null;const seq=++detailSeq;save.disabled=true;preview.textContent="กำลังโหลดรายละเอียด...";
-      results.querySelectorAll(".fcd-item").forEach(b=>b.classList.toggle("active",b.dataset.id===String(item.id)));
+      selected=item;
+      detail=null;
+
+      const seq=++detailSeq;
+      save.disabled=true;
+      preview.textContent="กำลังโหลดรายละเอียด...";
+
+      results.querySelectorAll(".fcd-item").forEach(b=>{
+        b.classList.toggle("active",b.dataset.id===String(item.id));
+      });
+
       status.textContent="กำลังโหลดข้อมูลรายละเอียด...";
+
       try{
-        const data=await invoke({action:"detail",id:String(item.id||"")});
+        const data=await invoke({
+          action:"detail",
+          id:String(item.id||"")
+        });
+
         if(seq!==detailSeq)return;
-        if(!data.food||!Array.isArray(data.nutrients))throw new Error("รูปแบบข้อมูลรายละเอียดไม่ถูกต้อง");
-        detail=data;renderDetail();status.textContent="โหลดรายละเอียดสำเร็จ · "+data.nutrients.length+" รายการสารอาหาร";
-      }catch(e){if(seq!==detailSeq)return;preview.textContent="โหลดรายละเอียดไม่สำเร็จ: "+e.message;status.textContent="ตรวจสอบว่าได้ติดตั้ง Edge Function แล้ว"};
+
+        if(!data.food||!Array.isArray(data.nutrients)){
+          throw new Error("รูปแบบข้อมูลรายละเอียดไม่ถูกต้อง");
+        }
+
+        detail=data;
+        renderDetail();
+
+        status.textContent="โหลดรายละเอียดสำเร็จ · "+data.nutrients.length+" รายการสารอาหาร";
+
+      }catch(e){
+        if(seq!==detailSeq)return;
+
+        preview.textContent="โหลดรายละเอียดไม่สำเร็จ: "+e.message;
+        status.textContent="ตรวจสอบว่าได้ติดตั้ง Edge Function แล้ว";
+      }
     }
+
     async function runSearch(){
-      const q=search.value.trim(),seq=++searchSeq;selected=null;detail=null;save.disabled=true;results.replaceChildren();
-      if(q.length<2){preview.textContent="พิมพ์อย่างน้อย 2 ตัวอักษร";return}
-      preview.textContent="กำลังค้นหา...";status.textContent="กำลังค้นหาใน FoodCheck...";
+      const q=search.value.trim();
+      const seq=++searchSeq;
+
+      selected=null;
+      detail=null;
+      save.disabled=true;
+      results.replaceChildren();
+
+      if(q.length<2){
+        preview.textContent="พิมพ์อย่างน้อย 2 ตัวอักษร";
+        return;
+      }
+
+      preview.textContent="กำลังค้นหา...";
+      status.textContent="กำลังค้นหาใน FoodCheck...";
+
       try{
-        const data=await invoke({action:"search",q});if(seq!==searchSeq)return;
+        const data=await invoke({action:"search",q});
+
+        if(seq!==searchSeq)return;
+
         const items=Array.isArray(data.results)?data.results:[];
-        if(!items.length){preview.textContent="ไม่พบรายการอาหาร";status.textContent="ค้นหาเสร็จแล้ว · 0 รายการ";return}
-        items.forEach(item=>{const b=make("button","fcd-item");b.type="button";b.dataset.id=String(item.id||"");const left=make("span");left.append(make("strong","",item.name_th||"ไม่ระบุชื่อ"));if(item.name_en)left.append(make("span","fcd-muted",item.name_en));b.append(left,make("span","fcd-status",item.status||item.source||"FoodCheck"));b.addEventListener("click",()=>choose(item));results.append(b)});
-        preview.textContent="พบ "+items.length+" รายการ · คลิกเมนูที่ต้องการ";status.textContent="ค้นหาเสร็จแล้ว · "+items.length+" รายการ";
-      }catch(e){if(seq!==searchSeq)return;preview.textContent="เชื่อมต่อไม่สำเร็จ: "+e.message;status.textContent="ตรวจสอบ Edge Function และสถานะ Supabase"};
+
+        if(!items.length){
+          preview.textContent="ไม่พบรายการอาหาร";
+          status.textContent="ค้นหาเสร็จแล้ว · 0 รายการ";
+          return;
+        }
+
+        items.forEach(item=>{
+          const b=make("button","fcd-item");
+          b.type="button";
+          b.dataset.id=String(item.id||"");
+
+          const left=make("span");
+          left.append(
+            make("strong","",item.name_th||"ไม่ระบุชื่อ")
+          );
+
+          if(item.name_en){
+            left.append(make("span","fcd-muted",item.name_en));
+          }
+
+          b.append(
+            left,
+            make("span","fcd-status",item.status||item.source||"FoodCheck")
+          );
+
+          b.addEventListener("click",()=>choose(item));
+          results.append(b);
+        });
+
+        preview.textContent="พบ "+items.length+" รายการ · คลิกเมนูที่ต้องการ";
+        status.textContent="ค้นหาเสร็จแล้ว · "+items.length+" รายการ";
+
+      }catch(e){
+        if(seq!==searchSeq)return;
+
+        preview.textContent="เชื่อมต่อไม่สำเร็จ: "+e.message;
+        status.textContent="ตรวจสอบ Edge Function และสถานะ Supabase";
+      }
     }
-    let timer;search.addEventListener("input",()=>{clearTimeout(timer);timer=setTimeout(runSearch,300)});
-    weight.addEventListener("input",()=>{if(detail)renderDetail()});
+
+    let timer;
+
+    search.addEventListener("input",()=>{
+      clearTimeout(timer);
+      timer=setTimeout(runSearch,300);
+    });
+
+    weight.addEventListener("input",()=>{
+      if(detail)renderDetail();
+    });
+
     save.addEventListener("click",async()=>{
       try{
         if(!detail||!detail._base)return;
-        if(typeof currentUser==="undefined"||!currentUser)throw new Error("กรุณาเข้าสู่ระบบก่อน");
-        const w=Math.max(1,Number(weight.value)||1),f=w/100,b=detail._base,food=detail.food||selected;
+
+        if(typeof currentUser==="undefined"||!currentUser){
+          throw new Error("กรุณาเข้าสู่ระบบก่อน");
+        }
+
+        const w=Math.max(1,Number(weight.value)||1);
+        const f=w/100;
+        const b=detail._base;
+        const food=detail.food||selected;
+
+        const note=[
+          "FoodCheck API",
+          food.food_code||selected.food_code||"",
+          detail._kcalEstimated
+            ?"พลังงานประมาณ คำนวณจาก Macro 4-4-9"
+            :"พลังงานจาก FoodCheck",
+          "สารอาหารต่อ 100 กรัม"
+        ].filter(Boolean).join(" · ");
+
         const {error}=await db.from("food_logs").insert({
-          user_id:currentUser.id,logged_on:new Date().toLocaleDateString("en-CA"),meal:meal.value,
-          name:food.name_th||selected.name_th,serving:w+" g",calories:Math.round(b.kcal*f),
+          user_id:currentUser.id,
+          logged_on:new Date().toLocaleDateString("en-CA"),
+          meal:meal.value,
+          name:food.name_th||selected.name_th,
+          serving:w+" g",
+          calories:Math.round(b.kcal*f),
           protein_g:b.protein==null?null:Number((b.protein*f).toFixed(2)),
           carbs_g:b.carbs==null?null:Number((b.carbs*f).toFixed(2)),
           fat_g:b.fat==null?null:Number((b.fat*f).toFixed(2)),
-          notes:"FoodCheck API · "+(food.food_code||selected.food_code||"")+" · สารอาหารต่อ 100 กรัม"
+          notes:note
         });
+
         if(error)throw error;
-        if(typeof toast==="function")toast("บันทึกข้อมูลจาก FoodCheck แล้ว");
-        if(typeof loadAll==="function")await loadAll();
-      }catch(e){if(typeof toast==="function")toast("บันทึกไม่สำเร็จ: "+e.message,true);else alert(e.message)}
+
+        if(typeof toast==="function"){
+          toast("บันทึกข้อมูลจาก FoodCheck แล้ว");
+        }
+
+        if(typeof loadAll==="function"){
+          await loadAll();
+        }
+
+      }catch(e){
+        if(typeof toast==="function"){
+          toast("บันทึกไม่สำเร็จ: "+e.message,true);
+        }else{
+          alert(e.message);
+        }
+      }
     });
   }
-  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",install);else install();
+
+  if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",install);
+  }else{
+    install();
+  }
 })();
