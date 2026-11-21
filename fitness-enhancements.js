@@ -299,7 +299,7 @@
               const addFields = row => {
                 const next = {...row};
                 if (table === "food_logs") {
-                  next.logged_on = $id("ft-selected-food-date")?.value || todayLocal();
+                  next.logged_on = next.logged_on || $id("ft-selected-food-date")?.value || todayLocal();
                 }
                 if (table === "workout_logs") {
                   const calc = typeof window.__ftWorkoutCalc === "function" ? window.__ftWorkoutCalc() : null;
