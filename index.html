@@ -155,15 +155,19 @@
       </section>
 
       <section id="page-workout" class="page">
-        <div class="panel form-panel"><h3>บันทึกการออกกำลังกาย</h3><form id="workout-form" class="form-grid">
+        <div class="workout-page-intro">
+          <div><span class="workout-page-eyebrow">TRAINING LOG</span><h2>บันทึกการฝึก</h2><p>วางแผนแต่ละวัน บันทึกทุกเซต และติดตามพัฒนาการของคุณ</p></div>
+          <div class="workout-page-mark">↗</div>
+        </div>
+        <div class="panel form-panel workout-entry-panel"><div class="workout-entry-heading"><div><span class="workout-section-step">01 / SESSION</span><h3>ข้อมูลการฝึกวันนี้</h3><p>เลือกประเภทกิจกรรมและระยะเวลาการฝึก</p></div></div><form id="workout-form" class="form-grid">
           <label>ประเภท<select name="type"><option>Weight Training</option><option>Cardio</option><option>Ping Pong</option><option>Other</option></select></label>
           <label>ชื่อกิจกรรม<select name="name" required><option value="Pushday">Pushday</option><option value="Pullday">Pullday</option><option value="Leg&Abs">Leg&Abs</option><option value="Other">Other</option></select></label>
           <label>ระยะเวลา (นาที)<input name="duration" type="number" min="0" value="60"></label>
           
-          <label class="wide">รายละเอียด / ท่าที่เล่น<textarea name="notes" rows="3" placeholder="เช่น Bench Press 3x10, Row 3x12"></textarea></label>
+          <label class="wide workout-notes-storage">รายละเอียด / ท่าที่เล่น<textarea name="notes" rows="3" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)"></textarea></label>
           <button class="primary wide" type="submit">บันทึกการฝึก</button>
         </form></div>
-        <article class="panel"><h3>ประวัติการฝึก</h3><div id="workout-list" class="empty">ยังไม่มีข้อมูล</div></article>
+        <article class="panel workout-history-panel"><div class="workout-entry-heading"><div><span class="workout-section-step">02 / HISTORY</span><h3>ประวัติการฝึก</h3><p>รายการฝึกที่บันทึกไว้ในบัญชีของคุณ</p></div></div><div id="workout-list" class="empty">ยังไม่มีข้อมูล</div></article>
       </section>
 
       <section id="page-body" class="page hidden">
