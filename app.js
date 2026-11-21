@@ -1951,7 +1951,7 @@ $("food-form").addEventListener("submit", async e => {
     const x = formObject(e.target);
 
     await insert("food_logs", {
-      logged_on: today(),
+      logged_on: $("ft-selected-food-date")?.value || today(),
       meal: x.meal,
       name: x.name,
       serving: x.serving,
