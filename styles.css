@@ -34,3 +34,74 @@
 .analytics-disclaimer{font-size:10px;color:var(--muted);line-height:1.7;margin:14px 2px 0}
 @media(max-width:1100px){.analytics-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.analytics-intro{display:block}.range-switch{width:max-content;margin-top:14px}.analytics-grid{grid-template-columns:1fr}.chart-wide{grid-column:auto}.chart-area{height:230px}.analytics-kpi{padding:14px}.analytics-kpi strong{font-size:24px}.analytics-kpi>span{min-height:28px;font-size:10px}}
+
+/* Workout Performance Comparison */
+.workout-compare-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 8px 0 16px;
+}
+
+.workout-compare-metric {
+  min-width: 0;
+  padding: 13px;
+  background: rgba(255,255,255,.025);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.workout-compare-metric span,
+.workout-compare-metric small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.workout-compare-metric strong {
+  display: block;
+  font-size: 22px;
+  margin: 7px 0 4px;
+}
+
+.workout-compare-metric small {
+  line-height: 1.6;
+}
+
+.workout-compare-table-wrap {
+  overflow-x: auto;
+}
+
+.workout-compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.workout-compare-table th,
+.workout-compare-table td {
+  padding: 10px 9px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.workout-compare-table th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.workout-compare-table th small {
+  font-weight: 400;
+  font-size: 9px;
+}
+
+@media (max-width: 700px) {
+  .workout-compare-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .workout-compare-metric strong {
+    font-size: 20px;
+  }
+}
