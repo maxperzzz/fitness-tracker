@@ -836,3 +836,12 @@
 
 /* Configurable muscle training balance alerts */
 .muscle-alert-panel{margin-top:18px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}.muscle-alert-settings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:9px;align-items:end}.muscle-alert-settings label{display:grid;gap:6px;color:var(--muted);font-size:10px}.muscle-alert-settings input{width:100%;min-width:0;padding:9px;border:1px solid var(--line);border-radius:8px;background:#111820;color:var(--text)}.muscle-alert-settings button{min-height:36px;padding:8px 12px;border:1px solid #476b53;border-radius:8px;background:#263b2e;color:#c6edcf;font-size:10px;font-weight:700;cursor:pointer}.muscle-alert-disclaimer{margin:10px 0;color:var(--muted);font-size:9px;line-height:1.6}.muscle-alert-list{display:grid;gap:7px}.muscle-alert-item{display:grid;gap:3px;padding:10px 11px;border:1px solid var(--line);border-left-width:3px;border-radius:8px;background:#ffffff06}.muscle-alert-item strong{font-size:11px;color:var(--text)}.muscle-alert-item span{font-size:10px;color:var(--muted);line-height:1.5}.muscle-alert-item.neutral{border-left-color:#64748b}.muscle-alert-item.watch{border-left-color:#d2a45e}.muscle-alert-item.review{border-left-color:#d77d7d}.muscle-alert-empty{margin:0;padding:10px;color:#9bdcaf;font-size:11px}@media(max-width:680px){.muscle-alert-settings{grid-template-columns:1fr 1fr}.muscle-alert-settings button{grid-column:1/-1;min-height:40px}}
+
+
+/* Simple daily calorie total entry */
+.food-daily-total-panel{margin-bottom:14px;border-color:#34483d;background:linear-gradient(145deg,#1d2924,#1a2028)}
+.food-daily-total-form{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}
+.food-daily-total-form label{display:grid;gap:7px;color:var(--muted);font-size:11px}
+.food-daily-total-form input{width:100%;min-width:0;padding:11px;border:1px solid var(--line);border-radius:10px;background:#11161d;color:var(--text)}
+.food-daily-total-form button{min-height:40px;padding:10px 15px}
+@media(max-width:620px){.food-daily-total-form{grid-template-columns:1fr}.food-daily-total-form button{width:100%}}
