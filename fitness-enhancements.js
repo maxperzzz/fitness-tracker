@@ -154,14 +154,25 @@
       form.insertBefore(preview, form.lastElementChild);
     }
 
-    // Use the latest recorded body weight when available; never silently assume a weight.
-    try {
-      const latest = typeof cache !== "undefined" && Array.isArray(cache.body)
-        ? [...cache.body].filter(x => Number(x.weight_kg) > 0)
-            .sort((a,b) => String(b.measured_on).localeCompare(String(a.measured_on)))[0]
-        : null;
-      if (latest) weight.value = Number(latest.weight_kg).toFixed(1);
-    } catch (_) {}
+      // Auto-fill latest saved body weight after Supabase data is loaded.
+    const syncLatestBodyWeight = () => {
+      if (weight.value) return;
+
+      try {
+        const latest = typeof cache !== "undefined" && Array.isArray(cache.body)
+          ? [...cache.body].filter(x => Number(x.weight_kg) > 0)
+              .sort((a,b) => String(b.measured_on).localeCompare(String(a.measured_on)))[0]
+          : null;
+
+        if (latest) {
+          weight.value = Number(latest.weight_kg).toFixed(1);
+          weight.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      } catch (_) {}
+    };
+
+    syncLatestBodyWeight();
+    document.addEventListener("fitness-data-loaded", syncLatestBodyWeight);
 
     const calculate = () => {
       const minutes = Math.max(0, Number(form.elements.duration?.value) || 0);
