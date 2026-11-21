@@ -777,3 +777,30 @@
  .workout-entry-panel #workout-form { grid-template-columns:1fr; }
  .workout-entry-panel #workout-form > label { grid-column:1/-1; }
 }
+
+
+/* Workout history cards */
+.workout-history-panel #workout-list { overflow:visible; }
+.workout-card-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; }
+.workout-history-card { min-width:0; padding:16px; border:1px solid #303d49; border-radius:14px; background:linear-gradient(145deg,#202a35,#171e27); box-shadow:0 7px 20px #0002; }
+.workout-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.workout-card-date { color:#91d6a5; font-size:10px; font-weight:700; letter-spacing:.3px; }
+.workout-card-top h4 { margin:4px 0 0; color:var(--text); font-size:16px; }
+.workout-card-duration { flex:0 0 auto; padding:6px 9px; border:1px solid #3b4b58; border-radius:8px; color:#d0d9e2; font-size:10px; }
+.workout-card-meta { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0; }
+.workout-card-meta span { padding:5px 8px; border-radius:7px; background:#ffffff09; color:#aab8c6; font-size:9px; }
+.workout-card-exercise-list { display:grid; gap:10px; }
+.workout-card-exercise { padding:10px; border:1px solid #2d3945; border-radius:10px; background:#11182080; }
+.workout-card-exercise > strong { display:block; margin-bottom:8px; color:#e6edf4; font-size:11px; }
+.workout-card-sets { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+.workout-card-set { display:flex; flex-direction:column; gap:3px; min-width:0; padding:7px; border-radius:8px; background:#ffffff08; }
+.workout-card-set b { color:#91d6a5; font-size:9px; }
+.workout-card-set span { color:#e2e8ef; font-size:10px; font-weight:700; }
+.workout-card-set small { color:#8f9eac; font-size:9px; }
+.workout-card-legacy { margin:0; color:#aab8c6; font-size:11px; white-space:pre-wrap; }
+.workout-card-footer { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:13px; padding-top:11px; border-top:1px solid #ffffff12; }
+.workout-card-calories { color:#a6b3c0; font-size:9px; }
+.workout-card-footer .workout-delete-btn { padding:6px 9px; border:1px solid #604047; border-radius:8px; background:#38252b66; color:#e7a3a3; font-size:10px; cursor:pointer; }
+.workout-card-footer .workout-delete-btn:hover { border-color:#e07b7b; }
+@media(max-width:760px) { .workout-card-list { grid-template-columns:1fr; } }
+@media(max-width:420px) { .workout-history-card { padding:12px; } .workout-card-sets { grid-template-columns:repeat(2,minmax(0,1fr)); } }
