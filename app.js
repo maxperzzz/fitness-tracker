@@ -1170,7 +1170,6 @@ function tableHtml(data, cols) {
 }
 
 function foodTableHtml(data) {
-function foodTableHtml(data) {
 
   if (!data.length) return "ยังไม่มีรายการอาหาร";
 
