@@ -463,7 +463,7 @@ function workoutHistoryHtml(records) {
     const match = raw.match(/\[WORKOUT_V2_JSON\]([\s\S]*?)\[\/WORKOUT_V2_JSON\]/);
     let exercises = [];
     if (match) { try { exercises = JSON.parse(match[1]); } catch (_) {} }
-    const legacy = raw.replace(/\[WORKOUT_V2_JSON\][\s\S]*?\[\/WORKOUT_V2_JSON\]/g, "").trim();
+    const legacy = raw.replace(/\[WORKOUT_V2_JSON\][\s\S]*?\[\/WORKOUT_V2_JSON\]/g, "").replace(/\[WORKOUT_META\][\s\S]*?\[\/WORKOUT_META\]/g, "").trim();
     const setCount = exercises.reduce((sum, ex) => sum + (ex.sets || []).length, 0);
     const exerciseHtml = exercises.length ? exercises.map((ex, index) => {
       const sets = (ex.sets || []).map((set, setIndex) =>
