@@ -81,6 +81,31 @@
             <p class="muted">บันทึกยอดโปรตีนรวมต่อวัน ไม่ต้องแยกมื้อหรือกรอกสารอาหารอื่น</p>
           </div>
         </div>
+        <div class="protein-week-summary">
+          <article class="panel protein-summary-card">
+            <span>ค่าเฉลี่ย 7 วัน</span>
+            <strong id="protein-week-average">—</strong>
+            <small id="protein-week-average-note">รอข้อมูล</small>
+          </article>
+          <article class="panel protein-summary-card">
+            <span>วันที่ถึงเป้าหมาย</span>
+            <strong id="protein-week-achieved">0 / 7</strong>
+            <small id="protein-week-achieved-note">รอข้อมูล</small>
+          </article>
+          <article class="panel protein-summary-card">
+            <span>วันที่บันทึกแล้ว</span>
+            <strong id="protein-week-logged">0 / 7</strong>
+            <small id="protein-week-logged-note">รอข้อมูล</small>
+          </article>
+        </div>
+        <article class="panel protein-chart-panel">
+          <div class="panel-head">
+            <div><h3>Protein Trend</h3><p class="muted">ปริมาณโปรตีนย้อนหลัง 7 วัน</p></div>
+            <span class="chart-tag">GRAMS</span>
+          </div>
+          <div class="chart-area"><canvas id="protein-week-chart"></canvas></div>
+          <p id="protein-week-chart-note" class="chart-note">รอข้อมูล</p>
+        </article>
         <div class="protein-dashboard panel">
           <div class="protein-kpi">
             <span>โปรตีนที่ได้รับวันนี้</span>
