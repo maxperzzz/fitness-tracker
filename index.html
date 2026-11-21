@@ -74,69 +74,82 @@
       </section>
 
       <section id="page-protein" class="page hidden">
-        <div class="welcome">
+        <div class="protein-intro">
           <div>
             <p class="eyebrow">DAILY PROTEIN TRACKER</p>
-            <h2>วันนี้ได้รับโปรตีนเท่าไร?</h2>
-            <p class="muted">บันทึกยอดโปรตีนรวมต่อวัน ไม่ต้องแยกมื้อหรือกรอกสารอาหารอื่น</p>
+            <h2>Protein, made simple.</h2>
+            <p>ติดตามโปรตีนในแต่ละวัน เพื่อให้เข้าใกล้เป้าหมายอย่างสม่ำเสมอ</p>
           </div>
+          <div class="protein-intro-mark" aria-hidden="true">P<span>+</span></div>
         </div>
-        <div class="protein-week-summary">
-          <article class="panel protein-summary-card">
-            <span>ค่าเฉลี่ย 7 วัน</span>
-            <strong id="protein-week-average">—</strong>
-            <small id="protein-week-average-note">รอข้อมูล</small>
-          </article>
-          <article class="panel protein-summary-card">
-            <span>วันที่ถึงเป้าหมาย</span>
-            <strong id="protein-week-achieved">0 / 7</strong>
-            <small id="protein-week-achieved-note">รอข้อมูล</small>
-          </article>
-          <article class="panel protein-summary-card">
-            <span>วันที่บันทึกแล้ว</span>
-            <strong id="protein-week-logged">0 / 7</strong>
-            <small id="protein-week-logged-note">รอข้อมูล</small>
-          </article>
+
+        <section class="protein-hero panel">
+          <div class="protein-hero-top">
+            <div>
+              <span class="protein-section-label">TODAY'S INTAKE</span>
+              <p>โปรตีนที่ได้รับวันนี้</p>
+            </div>
+            <span class="protein-live-dot">DAILY GOAL</span>
+          </div>
+          <div class="protein-hero-value">
+            <strong id="protein-daily-total">0.0</strong><span>g</span>
+            <small id="protein-daily-target">145 g</small>
+          </div>
+          <div class="protein-hero-track"><i id="protein-daily-progress"></i></div>
+          <div class="protein-progress-meta">
+            <span id="protein-daily-remaining">ยังไม่ได้บันทึกวันนี้</span>
+            <strong id="protein-daily-percent">0%</strong>
+          </div>
+        </section>
+
+        <div class="protein-entry-layout">
+          <div class="panel protein-entry-panel">
+            <div class="protein-panel-heading">
+              <div><span class="protein-section-label">QUICK LOG</span><h3>บันทึกโปรตีน</h3><p>เลือกสิ่งที่กิน แล้วปรับจำนวนให้ตรงกับจริง</p></div>
+              <span class="protein-step">01</span>
+            </div>
+            <form id="protein-form" class="form-grid">
+              <label class="wide protein-date-field">วันที่บันทึก<input id="protein-date" name="logged_on" type="date" required></label>
+              <div class="wide protein-food-section">
+                <div class="protein-subheading"><h4>แหล่งโปรตีน</h4><span>เลือกได้หลายรายการ</span></div>
+                <div id="protein-food-list" class="protein-food-list"></div>
+              </div>
+              <label class="wide protein-other-field">โปรตีนอื่น ๆ <span>กรัม (g)</span>
+                <input id="protein-other-grams" type="number" min="0" max="1000" step=".1" placeholder="เช่น ปลา เต้าหู้ หรืออาหารอื่น">
+              </label>
+              <div class="protein-draft-total wide"><span>ยอดรวมที่กำลังบันทึก</span><strong id="protein-draft-total">0.0 g</strong></div>
+              <input id="protein-grams" name="protein_g" type="hidden" value="0">
+              <button class="primary wide protein-save-button" type="submit">บันทึกโปรตีน <span>→</span></button>
+            </form>
+          </div>
+
+          <aside class="protein-side-column">
+            <div class="protein-tip-card">
+              <span class="protein-tip-icon">✦</span>
+              <span class="protein-section-label">TRACK SMART</span>
+              <h3>ความสม่ำเสมอสำคัญกว่าความเป๊ะ</h3>
+              <p>ใช้ปริมาณโปรตีนตามฉลากหรือชั่งน้ำหนักอาหารเมื่อทำได้ ค่าที่แสดงในรายการเป็นเพียงค่าประมาณ</p>
+            </div>
+            <div class="panel protein-week-summary">
+              <div class="protein-panel-heading"><div><span class="protein-section-label">LAST 7 DAYS</span><h3>สรุป 7 วัน</h3></div><span class="protein-step">02</span></div>
+              <article class="protein-summary-card"><span>โปรตีนเฉลี่ย</span><strong id="protein-week-average">—</strong><small id="protein-week-average-note">รอข้อมูล</small></article>
+              <article class="protein-summary-card"><span>วันที่ถึงเป้าหมาย</span><strong id="protein-week-achieved">0 / 7</strong><small id="protein-week-achieved-note">รอข้อมูล</small></article>
+              <article class="protein-summary-card"><span>วันที่บันทึกแล้ว</span><strong id="protein-week-logged">0 / 7</strong><small id="protein-week-logged-note">รอข้อมูล</small></article>
+            </div>
+          </aside>
         </div>
+
         <article class="panel protein-chart-panel">
-          <div class="panel-head">
-            <div><h3>Protein Trend</h3><p class="muted">ปริมาณโปรตีนย้อนหลัง 7 วัน</p></div>
+          <div class="protein-panel-heading">
+            <div><span class="protein-section-label">YOUR CONSISTENCY</span><h3>Protein Trend</h3><p>ปริมาณโปรตีนย้อนหลัง 7 วัน</p></div>
             <span class="chart-tag">GRAMS</span>
           </div>
           <div class="chart-area"><canvas id="protein-week-chart"></canvas></div>
           <p id="protein-week-chart-note" class="chart-note">รอข้อมูล</p>
         </article>
-        <div class="protein-dashboard panel">
-          <div class="protein-kpi">
-            <span>โปรตีนที่ได้รับวันนี้</span>
-            <strong><b id="protein-daily-total">0.0</b> <small>g</small></strong>
-            <div class="progress green"><i id="protein-daily-progress"></i></div>
-            <div class="protein-progress-meta">
-              <span id="protein-daily-remaining">ยังไม่ได้บันทึก</span>
-              <strong id="protein-daily-target">145 g</strong>
-            </div>
-          </div>
-        </div>
-        <div class="panel form-panel">
-          <h3>บันทึกโปรตีนรายวัน</h3>
-          <p class="muted">หนึ่งรายการต่อวัน หากบันทึกวันที่เดิมอีกครั้ง ระบบจะปรับยอดเป็นค่าใหม่</p>
-          <form id="protein-form" class="form-grid">
-            <label class="wide">วันที่<input id="protein-date" name="logged_on" type="date" required></label>
-            <div class="wide">
-              <h4>เลือกแหล่งโปรตีนที่กินวันนี้</h4>
-              <p class="muted">ติ๊กอาหารที่กิน แล้วใส่จำนวนหน่วย ระบบรวมโปรตีนให้อัตโนมัติ</p>
-              <div id="protein-food-list" class="protein-food-list"></div>
-            </div>
-            <label class="wide">โปรตีนอื่นที่ไม่ได้อยู่ในรายการ (กรัม)
-              <input id="protein-other-grams" type="number" min="0" max="1000" step=".1" placeholder="เช่น ปลา เต้าหู้ หรืออาหารอื่น">
-            </label>
-            <div class="protein-draft-total wide">รวมจากรายการที่เลือก <strong id="protein-draft-total">0.0 g</strong></div>
-            <input id="protein-grams" name="protein_g" type="hidden" value="0">
-            <button class="primary wide" type="submit">บันทึกโปรตีนวันนี้</button>
-          </form>
-        </div>
-        <article class="panel">
-          <h3>ประวัติโปรตีนรายวัน</h3>
+
+        <article class="panel protein-history-panel">
+          <div class="protein-panel-heading"><div><span class="protein-section-label">LOG HISTORY</span><h3>ประวัติการบันทึก</h3><p>ตรวจสอบยอดโปรตีนในแต่ละวัน</p></div><span class="protein-step">03</span></div>
           <div id="protein-history" class="table-wrap empty">ยังไม่มีประวัติการบันทึกโปรตีน</div>
         </article>
       </section>
