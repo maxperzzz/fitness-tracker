@@ -741,7 +741,7 @@ if ($("an-active-kcal-foot")) {
   "Weight Training",
   "Cardio",
   "Other"
-];"
+];
 
     const normalizeWorkoutType = value => {
       const raw = String(value || "").trim().toLowerCase();
@@ -952,13 +952,12 @@ const summaryGroups = [
   workouts.forEach(x => {
     const raw = String(x.activity_type || "").trim().toLowerCase();
 
-    const type =
-  const type =
-  ["weight training", "weight-training", "เวท", "เวทเทรนนิ่ง"].includes(raw)
-    ? "Weight Training"
-    : ["cardio", "คาร์ดิโอ"].includes(raw)
-      ? "Cardio"
-      : "Other";
+       const type =
+      ["weight training", "weight-training", "เวท", "เวทเทรนนิ่ง"].includes(raw)
+        ? "Weight Training"
+        : ["cardio", "คาร์ดิโอ"].includes(raw)
+          ? "Cardio"
+          : "Other";
 
     summaryByType[type] += num(x.duration_min);
   });
