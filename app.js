@@ -84,6 +84,8 @@ function showApp(user) {
     });
 
   $("date-chip").textContent = today();
+  const dashboardDate = $("dashboard-date");
+  if (dashboardDate && !dashboardDate.value) dashboardDate.value = today();
 
   loadAll();
 }
@@ -271,51 +273,22 @@ function shiftDate(daysAgo) {
 
 function nutritionForDay(dayKey) {
 
-  const rows = cache.food.filter(
-    x => x.logged_on === dayKey
-  );
+  const rows = cache.food.filter(x => x.logged_on === dayKey);
   const dailyTotal = rows.filter(x => String(x.notes || "").includes("[DAILY_KCAL_TOTAL]"));
   const foodRows = rows.filter(x => !String(x.notes || "").includes("[DAILY_KCAL_TOTAL]"));
 
-  /* Explicit daily total overrides summed food calories; macros still use item logs. */
-  if (rows.length) {
-    return {
-      kcal: dailyTotal.length
-        ? num(dailyTotal[dailyTotal.length - 1].calories)
-        : foodRows.reduce((s, x) => s + num(x.calories), 0),
-      protein: foodRows.reduce((s, x) => s + num(x.protein_g), 0),
-      source: "actual",
-      sourceDate: dayKey
-    };
+  /* Only use records from the selected date. Never carry yesterday's calories into today. */
+  if (!rows.length) {
+    return { kcal: 0, protein: 0, source: "none", sourceDate: null };
   }
-
-  /* Find the latest previous date with food records */
-
-  const dates = [...new Set(
-    cache.food
-      .filter(x => x.logged_on < dayKey)
-      .map(x => x.logged_on)
-  )].sort();
-
-  const sourceDate = dates[dates.length - 1];
-
-  if (!sourceDate) {
-    return {
-      kcal: null,
-      protein: null,
-      source: "none"
-    };
-  }
-
-  const previous = cache.food.filter(
-    x => x.logged_on === sourceDate
-  );
 
   return {
-    kcal: previous.reduce((s, x) => s + num(x.calories), 0),
-    protein: previous.reduce((s, x) => s + num(x.protein_g), 0),
-    source: "estimated",
-    sourceDate
+    kcal: dailyTotal.length
+      ? num(dailyTotal[dailyTotal.length - 1].calories)
+      : foodRows.reduce((sum, row) => sum + num(row.calories), 0),
+    protein: foodRows.reduce((sum, row) => sum + num(row.protein_g), 0),
+    source: "actual",
+    sourceDate: dayKey
   };
 }
 
@@ -484,7 +457,7 @@ function workoutHistoryHtml(records) {
 }
 function renderAll() {
 
-  const d = today();
+  const d = $("dashboard-date")?.value || today();
 
   renderProteinTracker();
 
@@ -534,11 +507,7 @@ function renderAll() {
           </span>
         </div>`
       ).join("")
-    : nutrition.source === "estimated"
-      ? `<div class="list-row muted">
-          ไม่มีรายการอาหารวันนี้ · ใช้ค่าประมาณจาก ${esc(nutrition.sourceDate)}
-        </div>`
-      : "ยังไม่มีรายการอาหาร";
+    : "ไม่มีรายการอาหารในวันที่เลือก";
 
   /* Today's workout */
 
