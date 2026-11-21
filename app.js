@@ -375,11 +375,7 @@ function renderAll() {
     ]);
 
   $("body-list").innerHTML =
-    tableHtml(cache.body, [
-      ["measured_on", "วันที่"],
-      ["weight_kg", "น้ำหนัก kg"],
-      ["body_fat_pct", "Body Fat %"]
-    ]);
+    bodyTableHtml(cache.body);
 
   const latestBody = [...cache.body].sort(
     (a, b) => b.measured_on.localeCompare(a.measured_on)
@@ -1174,7 +1170,64 @@ function tableHtml(data, cols) {
 }
 
 function foodTableHtml(data) {
+function bodyTableHtml(data) {
 
+  if (!data.length) return "ยังไม่มีข้อมูล";
+
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>วันที่</th>
+          <th>น้ำหนัก kg</th>
+          <th>Body Fat %</th>
+          <th>จัดการ</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data.slice(0, 30).map(r =>
+          `<tr>
+            <td>${esc(r.measured_on)}</td>
+            <td>${esc(r.weight_kg)}</td>
+            <td>${esc(r.body_fat_pct ?? "—")}</td>
+            <td>
+              <button
+                type="button"
+                class="secondary"
+                data-delete-body="${esc(r.id)}"
+              >ลบ</button>
+            </td>
+          </tr>`
+        ).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+async function deleteBodyMetric(id) {
+
+  if (!id || !currentUser) return;
+
+  if (!confirm("ยืนยันลบข้อมูลร่างกายรายการนี้ใช่ไหม?")) return;
+
+  try {
+
+    const { error } = await db
+      .from("body_metrics")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", currentUser.id);
+
+    if (error) throw error;
+
+    toast("ลบข้อมูลร่างกายแล้ว");
+
+    await loadAll();
+
+  } catch (err) {
+    toast("ลบไม่สำเร็จ: " + err.message, true);
+  }
+}
   if (!data.length) return "ยังไม่มีรายการอาหาร";
 
   const cols = [
@@ -1313,7 +1366,15 @@ document.addEventListener("click", e => {
 });
 
 /* Delete food event */
+/* Delete body event */
 
+$("body-list").addEventListener("click", e => {
+  const b = e.target.closest("[data-delete-body]");
+
+  if (b) {
+    deleteBodyMetric(b.dataset.deleteBody);
+  }
+});
 $("food-list").addEventListener("click", e => {
   const b = e.target.closest("[data-delete-food]");
 
