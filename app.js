@@ -351,7 +351,13 @@ function renderProteinFoodList() {
     </div>`;
   }).join("");
   const custom = saved.find(x => x.id === "other");
-  $("protein-other-grams").value = custom ? num(custom.protein_g) : "";
+  const currentRecord = cache.protein.find(x => x.logged_on === ($("protein-date").value || today()));
+  // Preserve older daily totals that were saved before itemized selections existed.
+  $("protein-other-grams").value = custom
+    ? num(custom.protein_g)
+    : currentRecord && !saved.length
+      ? num(currentRecord.protein_g)
+      : "";
   updateProteinDraft();
 }
 
