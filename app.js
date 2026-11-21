@@ -555,6 +555,7 @@ function renderBodyProgress() {
 
   destroyChart("bodyWeight");
   destroyChart("bodyFat");
+  destroyChart("bodyComposition");
 
   const weightCanvas = $("body-weight-chart");
   const fatCanvas = $("body-fat-chart");
@@ -622,6 +623,64 @@ function renderBodyProgress() {
   $("body-fat-chart-note").textContent = fatRecords.length
     ? fatRecords.length + " จุดข้อมูล · อ้างอิงจากประวัติที่บันทึก"
     : "ยังไม่มีข้อมูล Body Fat สำหรับแสดงกราฟ";
+
+  const compositionRecords = records.filter(r =>
+    r.weight_kg != null &&
+    r.body_fat_pct != null &&
+    Number.isFinite(Number(r.weight_kg)) &&
+    Number.isFinite(Number(r.body_fat_pct))
+  );
+
+  const compositionCanvas = $("body-composition-chart");
+  if (compositionCanvas && compositionRecords.length) {
+    analyticsCharts.bodyComposition = new Chart(compositionCanvas, {
+      type: "line",
+      data: {
+        labels: makeLabels(compositionRecords),
+        datasets: [
+          {
+            label: "Fat Mass (kg)",
+            data: compositionRecords.map(r =>
+              num(r.weight_kg) * num(r.body_fat_pct) / 100
+            ),
+            borderColor: "#e9b875",
+            backgroundColor: "rgba(233,184,117,.10)",
+            tension: .3,
+            pointRadius: 4
+          },
+          {
+            label: "Lean Body Mass (kg)",
+            data: compositionRecords.map(r =>
+              num(r.weight_kg) * (1 - num(r.body_fat_pct) / 100)
+            ),
+            borderColor: "#8bd7a8",
+            backgroundColor: "rgba(139,215,168,.10)",
+            tension: .3,
+            pointRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { usePointStyle: true, boxWidth: 7, padding: 18 }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { title: { display: true, text: "kg" } }
+        }
+      }
+    });
+  }
+
+  $("body-composition-chart-note").textContent = compositionRecords.length
+    ? compositionRecords.length + " จุดข้อมูล · มวลไขมันและมวลไร้ไขมันคำนวณจากน้ำหนักและ Body Fat"
+    : "ต้องมีทั้งน้ำหนักและ Body Fat เพื่อแสดงกราฟองค์ประกอบร่างกาย";
 }
 /* =========================================================
    ANALYTICS CHARTS
