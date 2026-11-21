@@ -30,9 +30,9 @@
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">FT</div><div><strong>FITNESS</strong><small>TRACKER</small></div></div>
       <nav id="nav">
+        <button class="nav-item" data-page="workout">↗ <span>ออกกำลังกาย</span></button>
         <button class="nav-item active" data-page="dashboard">▦ <span>ภาพรวม</span></button>
         <button class="nav-item" data-page="food">＋ <span>บันทึกอาหาร</span></button>
-        <button class="nav-item" data-page="workout">↗ <span>ออกกำลังกาย</span></button>
         <button class="nav-item" data-page="body">⌁ <span>ข้อมูลร่างกาย</span></button>
         <button class="nav-item" data-page="analytics">▥ <span>วิเคราะห์ผล</span></button>
         <button class="nav-item" data-page="photos">▧ <span>รูปภาพ</span></button>
@@ -42,8 +42,8 @@
     </aside>
 
     <main class="main">
-      <header class="topbar"><div><p class="eyebrow" id="today-label"></p><h1 id="page-title">ภาพรวมวันนี้</h1></div><div class="avatar">ME</div></header>
-      <section id="page-dashboard" class="page">
+      <header class="topbar"><div><p class="eyebrow" id="today-label"></p><h1 id="page-title">ออกกำลังกาย</h1></div><div class="avatar">ME</div></header>
+      <section id="page-dashboard" class="page hidden">
         <div class="welcome"><div><p class="eyebrow">DAILY PERFORMANCE</p><h2>วันนี้ทำได้แค่ไหน?</h2><p class="muted">บันทึกให้สม่ำเสมอ แล้วค่อยดูแนวโน้มระยะยาว</p></div><div class="date-chip" id="date-chip"></div></div>
         <div class="stat-grid">
           <article class="stat-card"><span>พลังงานที่ได้รับ</span><strong id="kcal-total">0 <small>kcal</small></strong><div class="progress"><i id="kcal-progress"></i></div><small class="muted" id="kcal-target">เป้าหมาย 2,000 kcal</small></article>
@@ -72,7 +72,7 @@
         <article class="panel"><h3>รายการอาหารล่าสุด</h3><div id="food-list" class="table-wrap empty">ยังไม่มีข้อมูล</div></article>
       </section>
 
-      <section id="page-workout" class="page hidden">
+      <section id="page-workout" class="page">
         <div class="panel form-panel"><h3>บันทึกการออกกำลังกาย</h3><form id="workout-form" class="form-grid">
           <label>ประเภท<select name="type"><option>Weight Training</option><option>Cardio</option><option>Ping Pong</option><option>Other</option></select></label>
           <label>ชื่อกิจกรรม<input name="name" required placeholder="เช่น Push Day / เดินเร็ว"></label>
