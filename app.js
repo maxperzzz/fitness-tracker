@@ -401,6 +401,8 @@ function renderAll() {
       ? (num(latestBody.weight_kg) * (1 - bodyFat / 100)).toFixed(1)
       : "—";
 
+  renderBodyProgress();
+
   /* Photo list */
 
   $("photo-list").innerHTML = cache.photos.length
@@ -412,6 +414,146 @@ function renderAll() {
         </div>`
       ).join("")
     : "ยังไม่มีรูปภาพ";
+}
+
+function renderBodyProgress() {
+
+  const records = [...cache.body].sort((a, b) =>
+    String(a.measured_on || "").localeCompare(
+      String(b.measured_on || "")
+    )
+  );
+
+  const first = records[0];
+  const latest = records[records.length - 1];
+  const firstFat = records.find(r => r.body_fat_pct != null);
+  const latestFat = [...records].reverse().find(r => r.body_fat_pct != null);
+
+  const weightChange = first && latest
+    ? num(latest.weight_kg) - num(first.weight_kg)
+    : null;
+
+  const fatChange = firstFat && latestFat
+    ? num(latestFat.body_fat_pct) - num(firstFat.body_fat_pct)
+    : null;
+
+  const formatChange = (value, unit) => {
+    if (value == null) return "—";
+    const sign = value > 0 ? "+" : "";
+    return sign + value.toFixed(1) + " " + unit;
+  };
+
+  $("body-weight-change").textContent =
+    formatChange(weightChange, "kg");
+
+  $("body-fat-change").textContent =
+    formatChange(fatChange, "จุด %");
+
+  $("body-progress-period").textContent = first && latest
+    ? first.measured_on + " ถึง " + latest.measured_on
+    : "รอข้อมูลเพิ่มเติม";
+
+  const weightRecords = records.filter(r =>
+    r.weight_kg != null && Number.isFinite(Number(r.weight_kg))
+  );
+  const fatRecords = records.filter(r =>
+    r.body_fat_pct != null && Number.isFinite(Number(r.body_fat_pct))
+  );
+
+  const makeLabels = data => data.map(r =>
+    new Date(r.measured_on + "T12:00:00").toLocaleDateString(
+      "th-TH",
+      { day: "numeric", month: "short", year: "2-digit" }
+    )
+  );
+
+  if (!window.Chart) return;
+
+  Chart.defaults.color = "#9ba7b7";
+  Chart.defaults.borderColor = "rgba(145,160,180,.13)";
+  Chart.defaults.font.family = "Inter, IBM Plex Sans Thai, sans-serif";
+
+  destroyChart("bodyWeight");
+  destroyChart("bodyFat");
+
+  const weightCanvas = $("body-weight-chart");
+  const fatCanvas = $("body-fat-chart");
+
+  if (weightCanvas) {
+    if (weightRecords.length) {
+      analyticsCharts.bodyWeight = new Chart(weightCanvas, {
+        type: "line",
+        data: {
+          labels: makeLabels(weightRecords),
+          datasets: [{
+            label: "Weight (kg)",
+            data: weightRecords.map(r => num(r.weight_kg)),
+            borderColor: "#8bd7a8",
+            backgroundColor: "rgba(139,215,168,.12)",
+            fill: true,
+            tension: .3,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { grid: { display: false } },
+            y: {
+              title: { display: true, text: "kg" }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  if (fatCanvas) {
+    if (fatRecords.length) {
+      analyticsCharts.bodyFat = new Chart(fatCanvas, {
+        type: "line",
+        data: {
+          labels: makeLabels(fatRecords),
+          datasets: [{
+            label: "Body Fat (%)",
+            data: fatRecords.map(r => num(r.body_fat_pct)),
+            borderColor: "#b8a4ff",
+            backgroundColor: "rgba(184,164,255,.12)",
+            fill: true,
+            tension: .3,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { grid: { display: false } },
+            y: {
+              title: { display: true, text: "%" }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  $("body-weight-chart-note").textContent = weightRecords.length
+    ? weightRecords.length + " จุดข้อมูล · อ้างอิงจากประวัติที่บันทึก"
+    : "ยังไม่มีข้อมูลน้ำหนักสำหรับแสดงกราฟ";
+
+  $("body-fat-chart-note").textContent = fatRecords.length
+    ? fatRecords.length + " จุดข้อมูล · อ้างอิงจากประวัติที่บันทึก"
+    : "ยังไม่มีข้อมูล Body Fat สำหรับแสดงกราฟ";
 }
 
 /* =========================================================
