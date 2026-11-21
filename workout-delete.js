@@ -28,83 +28,29 @@
 
   async function decorateRows() {
     const list = document.getElementById(LIST_ID);
-    const table = list?.querySelector("table");
-    if (!table || !client || busy) return;
+    if (!list || !client || busy) return;
+    const cards = [...list.querySelectorAll("[data-workout-card-id]")];
+    if (!cards.length) return;
     busy = true;
     try {
       const { data: { user }, error: authError } = await client.auth.getUser();
       if (authError || !user) return;
-
       const { data, error } = await client
         .from("workout_logs")
-        .select("id,workout_on,activity_type,name,duration_min,intensity,calories_total")
+        .select("id,calories_total")
         .eq("user_id", user.id)
-        .order("workout_on", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(30);
+        .in("id", cards.map(card => card.dataset.workoutCardId));
       if (error) throw error;
-
-      const head = table.querySelector("thead tr");
-      const bodyRows = [...table.querySelectorAll("tbody tr")];
-      if (!head) return;
-
-      // Reuse an existing Manage column if one is already present.
-      let manageIndex = [...head.children].findIndex(th => th.textContent.trim() === "จัดการ");
-      if (manageIndex < 0) {
-        const th = document.createElement("th");
-        th.textContent = "จัดการ";
-        head.appendChild(th);
-        manageIndex = head.children.length - 1;
-      }
-
-      // Add Total kcal once, immediately after Active kcal when that column exists.
-      let totalIndex = [...head.children].findIndex(th => th.textContent.trim() === "Total kcal");
-      if (totalIndex < 0) {
-        const totalTh = document.createElement("th");
-        totalTh.textContent = "Total kcal";
-        const activeIndex = [...head.children].findIndex(th => th.textContent.trim() === "Active kcal");
-        const insertAt = activeIndex >= 0 ? activeIndex + 1 : manageIndex;
-        head.insertBefore(totalTh, head.children[insertAt] || null);
-      }
-
-      // Recalculate column positions after inserting Total kcal.
-      manageIndex = [...head.children].findIndex(th => th.textContent.trim() === "จัดการ");
-      totalIndex = [...head.children].findIndex(th => th.textContent.trim() === "Total kcal");
-
-      bodyRows.forEach((tr, index) => {
-        const record = data?.[index];
+      const byId = new Map((data || []).map(record => [record.id, record]));
+      cards.forEach(card => {
+        const record = byId.get(card.dataset.workoutCardId);
         if (!record) return;
-
-        // Ensure exactly one delete button in the Manage cell.
-        let cells = [...tr.children];
-        let manageCell = cells[manageIndex];
-        if (!manageCell) {
-          manageCell = document.createElement("td");
-          tr.appendChild(manageCell);
-        }
-        if (!manageCell.querySelector(".workout-delete-btn")) {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "workout-delete-btn";
-          button.textContent = "ลบ";
-          button.dataset.workoutDeleteId = record.id;
-          manageCell.replaceChildren(button);
-        }
-
-        // Keep Total kcal aligned with its header.
-        cells = [...tr.children];
-        let totalCell = cells[totalIndex];
-        if (!totalCell) {
-          totalCell = document.createElement("td");
-          tr.insertBefore(totalCell, tr.children[totalIndex] || null);
-        }
-        const totalText = record.calories_total == null
-          ? "—"
-          : `${Math.round(Number(record.calories_total))} kcal`;
-        if (totalCell.textContent !== totalText) totalCell.textContent = totalText;
+        const calories = card.querySelector("[data-workout-calories]");
+        if (calories) calories.textContent = record.calories_total == null
+          ? "แคลอรีรวม —" : "แคลอรีรวม " + Math.round(Number(record.calories_total)) + " kcal";
       });
     } catch (err) {
-      console.error("Workout history columns:", err);
+      console.error("Workout card details:", err);
     } finally {
       busy = false;
     }
