@@ -139,7 +139,15 @@
 
     const dailyTotalForm = $("food-daily-total-form");
     const dailyTotalDate = $("food-daily-total-date");
-    dailyTotalDate.value = new Date().toLocaleDateString("en-CA");
+    // Keep the quick daily-total date aligned with the shared food-entry date.
+    const sharedFoodDate = $("ft-selected-food-date");
+    dailyTotalDate.value = sharedFoodDate?.value || new Date().toLocaleDateString("en-CA");
+    sharedFoodDate?.addEventListener("change", () => {
+      dailyTotalDate.value = sharedFoodDate.value;
+    });
+    dailyTotalDate.addEventListener("change", () => {
+      if (sharedFoodDate) sharedFoodDate.value = dailyTotalDate.value;
+    });
     dailyTotalForm.addEventListener("submit", async event => {
       event.preventDefault();
       const values = new FormData(dailyTotalForm);
