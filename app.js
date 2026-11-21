@@ -2032,6 +2032,7 @@ $("protein-food-list").addEventListener("change", e => {
   if (id) {
     const qty = document.querySelector('[data-protein-qty="' + id + '"]');
     qty.disabled = !e.target.checked;
+    e.target.closest(".protein-food-row")?.classList.toggle("selected", e.target.checked);
     if (e.target.checked && num(qty.value) <= 0) qty.value = 1;
   }
   updateProteinDraft();
