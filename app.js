@@ -334,16 +334,90 @@ function renderProteinTracker() {
   const latestBody = [...cache.body].sort(
     (a, b) => String(b.measured_on || "").localeCompare(String(a.measured_on || ""))
   )[0];
-  const target = latestBody ? num(latestBody.weight_kg) * 2 : 140;
+  const target = latestBody && num(latestBody.weight_kg) > 0
+    ? num(latestBody.weight_kg) * 2
+    : 140;
   const total = record ? num(record.protein_g) : 0;
   const remaining = Math.max(0, target - total);
 
   $("protein-daily-total").textContent = total.toFixed(1);
-  $("protein-daily-target").textContent = target.toFixed(0) + " g";
-  $("protein-daily-remaining").textContent =
-    total >= target ? "ถึงเป้าหมายโปรตีนแล้ว" : "เหลืออีก " + remaining.toFixed(1) + " g";
+  $("protein-daily-target").textContent = target.toFixed(1) + " g";
+  $("protein-daily-remaining").textContent = !record
+    ? "ยังไม่ได้บันทึกวันนี้"
+    : total >= target
+      ? "ถึงเป้าหมายโปรตีนแล้ว"
+      : "เหลืออีก " + remaining.toFixed(1) + " g";
   $("protein-daily-progress").style.width =
     Math.min(100, total / target * 100) + "%";
+
+  const weekDates = Array.from({ length: 7 }, (_, i) => shiftDate(6 - i));
+  const weekRecords = weekDates.map(date =>
+    cache.protein.find(x => x.logged_on === date) || null
+  );
+  const loggedRecords = weekRecords.filter(Boolean);
+  const average = loggedRecords.length
+    ? loggedRecords.reduce((sum, x) => sum + num(x.protein_g), 0) / loggedRecords.length
+    : null;
+  const achievedDays = loggedRecords.filter(x => num(x.protein_g) >= target).length;
+  const missingDays = 7 - loggedRecords.length;
+
+  $("protein-week-average").textContent =
+    average == null ? "—" : average.toFixed(1) + " g";
+  $("protein-week-average-note").textContent =
+    loggedRecords.length + " จาก 7 วันที่มีการบันทึก";
+  $("protein-week-achieved").textContent = achievedDays + " / 7";
+  $("protein-week-achieved-note").textContent =
+    missingDays ? "ยังไม่ได้บันทึก " + missingDays + " วัน" : "บันทึกครบ 7 วัน";
+  $("protein-week-logged").textContent = loggedRecords.length + " / 7";
+  $("protein-week-logged-note").textContent =
+    missingDays ? "วันที่ไม่บันทึกไม่นับเป็น 0 g" : "ข้อมูลครบทุกวัน";
+
+  if (window.Chart && $("protein-week-chart")) {
+    destroyChart("proteinWeek");
+    Chart.defaults.color = "#9ba7b7";
+    Chart.defaults.borderColor = "rgba(145,160,180,.13)";
+    analyticsCharts.proteinWeek = new Chart($("protein-week-chart"), {
+      type: "bar",
+      data: {
+        labels: weekDates.map(date => new Date(date + "T12:00:00").toLocaleDateString(
+          "th-TH", { day: "numeric", month: "short" }
+        )),
+        datasets: [{
+          label: "Protein (g)",
+          data: weekRecords.map(x => x ? num(x.protein_g) : null),
+          backgroundColor: "rgba(139,215,168,.72)",
+          borderColor: "#8bd7a8",
+          borderWidth: 1,
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: context => context.raw == null
+                ? "ยังไม่ได้บันทึก"
+                : "โปรตีน " + Number(context.raw).toFixed(1) + " g"
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: "Protein (g)" }
+          }
+        }
+      }
+    });
+  }
+  $("protein-week-chart-note").textContent =
+    loggedRecords.length
+      ? "แสดงเฉพาะวันที่มีการบันทึก · เป้าหมาย " + target.toFixed(1) + " g/วัน"
+      : "ยังไม่มีข้อมูลในช่วง 7 วันที่ผ่านมา";
 
   const sorted = [...cache.protein].sort(
     (a, b) => String(b.logged_on || "").localeCompare(String(a.logged_on || ""))
