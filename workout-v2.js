@@ -116,12 +116,12 @@
   form.addEventListener("submit", () => {
     const generated = collectExercises();
     const previous = notes.value
-      .replace(/\\n?\\[WORKOUT_V2\\][\\s\\S]*?\\[\\/WORKOUT_V2\\]/g,"")
-      .replace(/\\n?\\[WORKOUT_V2_JSON\\][\\s\\S]*?\\[\\/WORKOUT_V2_JSON\\]/g,"").trim();
+      .replace(/\n?\\[WORKOUT_V2\\][\\s\\S]*?\\[\\/WORKOUT_V2\\]/g,"")
+      .replace(/\n?\\[WORKOUT_V2_JSON\\][\\s\\S]*?\\[\\/WORKOUT_V2_JSON\\]/g,"").trim();
     const marker = generated.length
       ? "[WORKOUT_V2_JSON]" + JSON.stringify(generated) + "[/WORKOUT_V2_JSON]"
       : "";
-    notes.value = [previous,marker].filter(Boolean).join("\\n\\n");
+    notes.value = [previous,marker].filter(Boolean).join("\n\n");
   }, true);
 
   form.addEventListener("reset", () => {
