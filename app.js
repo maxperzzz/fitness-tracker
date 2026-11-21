@@ -1957,13 +1957,12 @@ $("workout-form").addEventListener("submit", async e => {
 
     const x = formObject(e.target);
 
-      await insert("body_metrics", {
-      measured_on: x.measured_on,
-      weight_kg: num(x.weight_kg),
-      body_fat_pct: x.body_fat_pct
-        ? num(x.body_fat_pct)
-        : null,
-      notes: x.notes
+    await insert("workout_logs", {
+      activity_type: x.type || "Other",
+      name: x.name,
+      duration_min: num(x.duration),
+      intensity: x.intensity || "ปานกลาง",
+      notes: x.notes || ""
     });
 
     e.target.reset();
