@@ -354,7 +354,7 @@
 
         const {error}=await db.from("food_logs").insert({
           user_id:currentUser.id,
-          logged_on:new Date().toLocaleDateString("en-CA"),
+          logged_on:document.getElementById("ft-selected-food-date")?.value||new Date().toLocaleDateString("en-CA"),
           meal:meal.value,
           name:food.name_th||selected.name_th,
           serving:w+" g",
