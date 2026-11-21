@@ -188,19 +188,40 @@ async function rows(table) {
 
 async function loadAll() {
   try {
-    [
-      cache.food,
-      cache.workouts,
-      cache.body,
-      cache.photos,
-      cache.protein
-    ] = await Promise.all([
+    // Load core trackers independently from optional/new modules.
+    // A missing protein_logs table must never block Food, Workout, Body or Photos.
+    const coreResults = await Promise.allSettled([
       rows("food_logs"),
       rows("workout_logs"),
       rows("body_metrics"),
-      rows("photos"),
-      rows("protein_logs")
+      rows("photos")
     ]);
+
+    const coreNames = ["Food", "Workout", "Body", "Photos"];
+    const coreErrors = [];
+    coreResults.forEach((result, index) => {
+      if (result.status === "fulfilled") {
+        if (index === 0) cache.food = result.value;
+        if (index === 1) cache.workouts = result.value;
+        if (index === 2) cache.body = result.value;
+        if (index === 3) cache.photos = result.value;
+      } else {
+        coreErrors.push(coreNames[index] + ": " + result.reason.message);
+      }
+    });
+
+    try {
+      cache.protein = await rows("protein_logs");
+    } catch (proteinError) {
+      cache.protein = [];
+      console.warn("Protein Tracker unavailable:", proteinError.message);
+      toast("เมนูโปรตีนยังใช้งานไม่ได้: กรุณาสร้างตาราง protein_logs ใน Supabase", true);
+    }
+
+    if (coreErrors.length) {
+      console.error("Some tracker data failed to load:", coreErrors);
+      toast("โหลดข้อมูลบางส่วนไม่สำเร็จ: " + coreErrors.join(" / "), true);
+    }
 
     cache.photos = await Promise.all(
       cache.photos.map(async photo => {
