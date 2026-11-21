@@ -25,7 +25,8 @@ let cache = {
   food: [],
   workouts: [],
   body: [],
-  photos: []
+  photos: [],
+  protein: []
 };
 
 let analyticsRange = 7;
@@ -146,6 +147,7 @@ function navigate(page) {
   const names = {
     dashboard: "ภาพรวมวันนี้",
     food: "บันทึกอาหาร",
+    protein: "บันทึกโปรตีน",
     workout: "ออกกำลังกาย",
     body: "ข้อมูลร่างกาย",
     analytics: "วิเคราะห์ผล",
@@ -154,6 +156,10 @@ function navigate(page) {
   };
 
   $("page-title").textContent = names[page];
+
+  if (page === "protein") {
+    renderProteinTracker();
+  }
 
   if (page === "analytics") {
     renderAnalytics();
@@ -186,12 +192,14 @@ async function loadAll() {
       cache.food,
       cache.workouts,
       cache.body,
-      cache.photos
+      cache.photos,
+      cache.protein
     ] = await Promise.all([
       rows("food_logs"),
       rows("workout_logs"),
       rows("body_metrics"),
-      rows("photos")
+      rows("photos"),
+      rows("protein_logs")
     ]);
 
     cache.photos = await Promise.all(
@@ -291,9 +299,50 @@ function nutritionForDay(dayKey) {
    DASHBOARD
    ========================================================= */
 
+function renderProteinTracker() {
+  const dateInput = $("protein-date");
+  const amountInput = $("protein-grams");
+  if (!dateInput || !amountInput) return;
+
+  const selectedDate = dateInput.value || today();
+  const record = cache.protein.find(x => x.logged_on === selectedDate);
+  if (document.activeElement !== amountInput) {
+    amountInput.value = record ? num(record.protein_g) : "";
+  }
+
+  const latestBody = [...cache.body].sort(
+    (a, b) => String(b.measured_on || "").localeCompare(String(a.measured_on || ""))
+  )[0];
+  const target = latestBody ? num(latestBody.weight_kg) * 2 : 140;
+  const total = record ? num(record.protein_g) : 0;
+  const remaining = Math.max(0, target - total);
+
+  $("protein-daily-total").textContent = total.toFixed(1);
+  $("protein-daily-target").textContent = target.toFixed(0) + " g";
+  $("protein-daily-remaining").textContent =
+    total >= target ? "ถึงเป้าหมายโปรตีนแล้ว" : "เหลืออีก " + remaining.toFixed(1) + " g";
+  $("protein-daily-progress").style.width =
+    Math.min(100, total / target * 100) + "%";
+
+  const sorted = [...cache.protein].sort(
+    (a, b) => String(b.logged_on || "").localeCompare(String(a.logged_on || ""))
+  );
+  $("protein-history").innerHTML = sorted.length
+    ? `<table><thead><tr><th>วันที่</th><th>โปรตีนรวม</th><th>จัดการ</th></tr></thead><tbody>
+      ${sorted.map(x => `<tr>
+        <td>${esc(x.logged_on)}</td>
+        <td>${num(x.protein_g).toFixed(1)} g</td>
+        <td><button type="button" class="secondary" data-delete-protein="${esc(x.id)}">ลบ</button></td>
+      </tr>`).join("")}
+      </tbody></table>`
+    : "ยังไม่มีประวัติการบันทึกโปรตีน";
+}
+
 function renderAll() {
 
   const d = today();
+
+  renderProteinTracker();
 
   const foods = cache.food.filter(
     x => x.logged_on === d
@@ -408,6 +457,16 @@ function renderAll() {
   renderBodyProgress();
 
   /* Photo list */
+
+  $("body-photo-list").innerHTML = cache.photos.filter(x => x.category === "Body Progress").length
+    ? cache.photos.filter(x => x.category === "Body Progress").sort((x, y) => String(y.taken_on).localeCompare(String(x.taken_on))).map(x =>
+        `<div class="photo-card">
+          <img src="${esc(x.signed_url || "")}" alt="Body progress photo">
+          <small>${esc(x.taken_on)}</small>
+          <small>${esc(x.caption || "")}</small>
+        </div>`
+      ).join("")
+    : "ยังไม่มีภาพ Body Progress";
 
   $("photo-list").innerHTML = cache.photos.length
     ? cache.photos.map(x =>
@@ -1848,6 +1907,52 @@ $("body-form").addEventListener("submit", async e => {
   }
 });
 
+/* Protein tracker */
+$("protein-date").addEventListener("change", renderProteinTracker);
+
+$("protein-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const loggedOn = $("protein-date").value;
+  const protein = Number($("protein-grams").value);
+
+  if (!loggedOn || !Number.isFinite(protein) || protein < 0 || protein > 1000) {
+    toast("กรุณากรอกวันที่และโปรตีน 0–1000 กรัม", true);
+    return;
+  }
+
+  try {
+    const { error } = await db.from("protein_logs").upsert({
+      user_id: currentUser.id,
+      logged_on: loggedOn,
+      protein_g: protein
+    }, { onConflict: "user_id,logged_on" });
+
+    if (error) throw error;
+    toast("บันทึกโปรตีนแล้ว");
+    await loadAll();
+    $("protein-date").value = loggedOn;
+    renderProteinTracker();
+  } catch (err) {
+    toast("บันทึกโปรตีนไม่สำเร็จ: " + err.message, true);
+  }
+});
+
+$("protein-history").addEventListener("click", async e => {
+  const button = e.target.closest("[data-delete-protein]");
+  if (!button) return;
+  const record = cache.protein.find(x => String(x.id) === String(button.dataset.deleteProtein));
+  if (!record || !confirm(`ยืนยันลบโปรตีนวันที่ ${record.logged_on} จำนวน ${record.protein_g} g?`)) return;
+
+  try {
+    const { error } = await db.from("protein_logs").delete().eq("id", record.id).eq("user_id", currentUser.id);
+    if (error) throw error;
+    toast("ลบข้อมูลโปรตีนแล้ว");
+    await loadAll();
+  } catch (err) {
+    toast("ลบข้อมูลไม่สำเร็จ: " + err.message, true);
+  }
+});
+
 /* Photo form */
 
 $("photo-form").addEventListener("submit", async e => {
@@ -1919,7 +2024,8 @@ $("backup-json").addEventListener("click", () => {
       food_logs: cache.food,
       workout_logs: cache.workouts,
       body_metrics: cache.body,
-      photos: cache.photos.map(({ signed_url, ...x }) => x)
+      photos: cache.photos.map(({ signed_url, ...x }) => x),
+      protein_logs: cache.protein
     }, null, 2),
 
     "application/json"
@@ -1932,7 +2038,8 @@ $("backup-csv").addEventListener("click", () => {
     food_logs: cache.food,
     workout_logs: cache.workouts,
     body_metrics: cache.body,
-    photos: cache.photos
+    photos: cache.photos,
+    protein_logs: cache.protein
   })) {
 
     const cols = [
@@ -1983,6 +2090,7 @@ async function init() {
 
   $("body-form").elements.measured_on.value = today();
   $("photo-form").elements.taken_on.value = today();
+  $("protein-date").value = today();
 
   if (!configured) {
 
