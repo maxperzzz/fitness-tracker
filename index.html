@@ -63,7 +63,7 @@
           <label class="wide">ชื่ออาหาร<input name="name" required placeholder="เช่น ข้าวกะเพราหมูสับ"></label>
           <label>มื้ออาหาร<select name="meal"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select></label>
           <label>ปริมาณ / หมายเหตุ<input name="serving" placeholder="เช่น 1 จาน / 250 g"></label>
-          <label>พลังงาน (kcal)<input name="calories" type="number" min="0" step="1" value="0"></label>
+          <label>แคลอรี่ที่ได้รับ (kcal)<input name="calories" type="number" min="0" step="1" placeholder="กรอกเอง เช่น 650" required></label>
           <label>โปรตีน (g)<input name="protein" type="number" min="0" step=".1" value="0"></label>
           <label>คาร์บ (g)<input name="carbs" type="number" min="0" step=".1" value="0"></label>
           <label>ไขมัน (g)<input name="fat" type="number" min="0" step=".1" value="0"></label>
@@ -392,7 +392,6 @@
   <script src="ai-food.js"></script>
   <script src="workout-delete.js"></script>
   <script src="fitness-enhancements.js"></script>
-  <script src="usda-food-search.js"></script>
   <script src="food-v2.js"></script>
   <script src="workout-v2.js"></script>
   <script src="exercise-analytics.js"></script>
