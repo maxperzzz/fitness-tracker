@@ -653,3 +653,53 @@
  .protein-food-name { font-size:12px; }
 }
 @media(max-width:360px) { #page-protein .protein-food-list { grid-template-columns:1fr; } #page-protein .protein-food-row { min-height:132px; } }
+
+
+/* Food Tracker V2 workspace */
+#food-v2-workspace { margin-bottom:20px; }
+.food-v2-intro { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:8px 2px 18px; }
+.food-v2-eyebrow { color:var(--green); font-size:9px; font-weight:800; letter-spacing:1.5px; }
+.food-v2-intro h2 { margin:5px 0; font-size:26px; letter-spacing:-.5px; }
+.food-v2-intro p { margin:0; color:var(--muted); font-size:12px; }
+.food-v2-mark { display:grid; place-items:center; width:58px; height:58px; flex:0 0 auto; border-radius:17px; background:linear-gradient(145deg,#2b4435,#1b2821); border:1px solid #3e614a; font-size:25px; }
+.food-v2-date-host { margin-bottom:14px; }
+#ft-food-date-panel { margin-bottom:0!important; }
+#ft-food-date-panel h3 { margin-bottom:10px; }
+.food-v2-tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; padding:5px; margin:0 0 14px; background:#141a21; border:1px solid var(--line); border-radius:13px; }
+.food-v2-tab { display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 9px; border:1px solid transparent; border-radius:9px; background:transparent; color:var(--muted); font-size:12px; font-weight:700; }
+.food-v2-tab.active { color:#b9edc9; background:#263a2d; border-color:#45634d; box-shadow:0 2px 8px #0002; }
+.food-v2-pane { display:none; }
+.food-v2-pane.active { display:block; }
+#fcd-food-panel,#ft-my-food-panel { max-width:none; margin-bottom:14px; }
+#food-v2-workspace .form-panel { max-width:none; }
+#food-v2-workspace .form-panel h3 { margin-bottom:14px; }
+#food-v2-workspace #food-form { max-width:900px; }
+.food-photo-panel { max-width:none; }
+.food-v2-panel-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:16px; }
+.food-v2-panel-heading h3 { margin:4px 0; }
+.food-v2-panel-heading p { margin:0; color:var(--muted); font-size:11px; }
+.food-v2-step { color:#657487; font-size:10px; font-weight:800; }
+.food-photo-drop { display:flex!important; flex-direction:column; align-items:center; justify-content:center; gap:7px; min-height:150px; padding:18px; border:1px dashed #526b5a; border-radius:14px; background:linear-gradient(145deg,#1e2c24,#1a2028); cursor:pointer; text-align:center; }
+.food-photo-drop input { position:absolute; width:1px!important; height:1px; opacity:0; pointer-events:none; }
+.food-photo-symbol { display:grid; place-items:center; width:38px; height:38px; border-radius:12px; background:#2b4435; color:#b9edc9; font-size:24px; }
+.food-photo-drop strong { font-size:13px; }
+.food-photo-drop small { color:var(--muted); font-size:10px; }
+.food-photo-preview { display:flex; align-items:center; gap:12px; margin-top:12px; padding:10px; border:1px solid var(--line); border-radius:11px; background:var(--panel2); }
+.food-photo-preview img { width:90px; height:90px; object-fit:cover; border-radius:9px; }
+.food-photo-preview strong,.food-photo-preview small { display:block; overflow-wrap:anywhere; }
+.food-photo-preview strong { font-size:11px; }
+.food-photo-preview small { margin-top:4px; color:var(--muted); font-size:10px; }
+.food-photo-note { margin:13px 0; padding:11px 13px; border:1px solid #5b5035; border-radius:10px; background:#2b271d; color:#d9c89c; font-size:10px; line-height:1.65; }
+.food-photo-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 14px; }
+.food-photo-fields label { display:grid; gap:7px; margin-top:12px; color:#b8c1ce; font-size:11px; }
+.food-photo-fields input,.food-photo-fields select { width:100%; min-width:0; padding:11px; border:1px solid var(--line); border-radius:10px; background:#11161d; color:var(--text); }
+.food-photo-use { margin-top:18px; width:100%; }
+.food-v2-history-host { margin-top:15px; }
+.food-v2-history-host .panel { margin-bottom:0; }
+@media(max-width:600px) {
+ .food-v2-intro h2 { font-size:21px; }
+ .food-v2-mark { width:48px; height:48px; }
+ .food-v2-tab { gap:5px; padding:11px 4px; font-size:10px; }
+ .food-photo-fields { grid-template-columns:1fr; }
+ .food-photo-preview img { width:76px; height:76px; }
+}
