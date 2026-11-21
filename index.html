@@ -113,6 +113,51 @@
     <small>kg</small>
   </article>
 </div>
+        <section class="body-goals-section panel">
+          <div class="body-goals-heading">
+            <div>
+              <p class="eyebrow">YOUR BODY GOALS</p>
+              <h3>เป้าหมายรูปร่าง</h3>
+              <p class="muted">ปรับเป้าหมายได้ตามต้องการ</p>
+            </div>
+            <button type="button" class="small-button" id="save-body-goals">บันทึกเป้าหมาย</button>
+          </div>
+          <div class="body-goal-inputs">
+            <label>น้ำหนักเป้าหมาย (kg)
+              <input id="body-goal-weight" type="number" min="1" max="500" step=".1" value="70">
+            </label>
+            <label>Body Fat เป้าหมาย (%)
+              <input id="body-goal-fat" type="number" min="1" max="60" step=".1" value="16">
+            </label>
+          </div>
+          <div class="body-goal-progress-grid">
+            <article class="body-goal-progress-card">
+              <div class="body-goal-progress-head">
+                <span>Weight</span>
+                <strong id="body-weight-goal-current">—</strong>
+              </div>
+              <div class="body-goal-target" id="body-weight-goal-target">เป้าหมาย 70.0 kg</div>
+              <div class="body-goal-track"><i id="body-weight-goal-progress"></i></div>
+              <div class="body-goal-progress-foot">
+                <small id="body-weight-goal-remaining">—</small>
+                <strong id="body-weight-goal-percent">—</strong>
+              </div>
+            </article>
+            <article class="body-goal-progress-card">
+              <div class="body-goal-progress-head">
+                <span>Body Fat</span>
+                <strong id="body-fat-goal-current">—</strong>
+              </div>
+              <div class="body-goal-target" id="body-fat-goal-target">เป้าหมาย 16.0 %</div>
+              <div class="body-goal-track purple"><i id="body-fat-goal-progress"></i></div>
+              <div class="body-goal-progress-foot">
+                <small id="body-fat-goal-remaining">—</small>
+                <strong id="body-fat-goal-percent">—</strong>
+              </div>
+            </article>
+          </div>
+          <p class="body-goal-note">ความคืบหน้าคำนวณจากข้อมูลแรกที่บันทึกเทียบกับข้อมูลล่าสุด และเก็บเป้าหมายไว้ในเบราว์เซอร์เครื่องนี้</p>
+        </section>
         <section class="body-progress-section">
           <div class="body-progress-heading">
             <div>
