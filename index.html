@@ -113,6 +113,46 @@
     <small>kg</small>
   </article>
 </div>
+        <section class="body-progress-section">
+          <div class="body-progress-heading">
+            <div>
+              <p class="eyebrow">BODY PROGRESS</p>
+              <h3>สรุปพัฒนาการร่างกาย</h3>
+              <p id="body-progress-period" class="muted">รอข้อมูลเพิ่มเติม</p>
+            </div>
+          </div>
+          <div class="body-progress-summary">
+            <article class="body-progress-stat">
+              <span>น้ำหนักเปลี่ยนแปลง</span>
+              <strong id="body-weight-change">—</strong>
+              <small>เทียบข้อมูลแรกกับล่าสุด</small>
+            </article>
+            <article class="body-progress-stat">
+              <span>Body Fat เปลี่ยนแปลง</span>
+              <strong id="body-fat-change">—</strong>
+              <small>หน่วยเป็นจุดเปอร์เซ็นต์</small>
+            </article>
+          </div>
+          <div class="body-progress-charts">
+            <article class="panel chart-panel">
+              <div class="chart-heading">
+                <div><h3>Weight Trend</h3><p class="muted">แนวโน้มน้ำหนักตามวันที่บันทึก</p></div>
+                <span class="chart-tag">KG</span>
+              </div>
+              <div class="chart-area"><canvas id="body-weight-chart"></canvas></div>
+              <div id="body-weight-chart-note" class="chart-note"></div>
+            </article>
+            <article class="panel chart-panel">
+              <div class="chart-heading">
+                <div><h3>Body Fat Trend</h3><p class="muted">แนวโน้มเปอร์เซ็นต์ไขมัน</p></div>
+                <span class="chart-tag">BODY FAT</span>
+              </div>
+              <div class="chart-area"><canvas id="body-fat-chart"></canvas></div>
+              <div id="body-fat-chart-note" class="chart-note"></div>
+            </article>
+          </div>
+          <p class="body-progress-disclaimer">การเปลี่ยนแปลงคำนวณจากข้อมูลแรกและข้อมูลล่าสุดที่บันทึก ไม่ได้ประมาณค่าระหว่างวันที่ไม่มีข้อมูล</p>
+        </section>
         <article class="panel"><h3>ประวัติร่างกาย</h3><div id="body-list" class="empty">ยังไม่มีข้อมูล</div></article>
       </section>
 
