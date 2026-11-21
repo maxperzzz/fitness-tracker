@@ -734,14 +734,81 @@ if ($("an-active-kcal-foot")) {
       }
     );
 
-    /* Workout chart */
 
-    const types = {};
+    /* Workout Analytics: four standard categories */
+
+    const workoutGroups = [
+      "Weight Training",
+      "Cardio",
+      "Ping Pong",
+      "Other"
+    ];
+
+    const normalizeWorkoutType = value => {
+      const raw = String(value || "").trim().toLowerCase();
+
+      if (["weight training", "weight-training", "เวท", "เวทเทรนนิ่ง"].includes(raw)) {
+        return "Weight Training";
+      }
+
+      if (["cardio", "คาร์ดิโอ"].includes(raw)) {
+        return "Cardio";
+      }
+
+      if (["ping pong", "table tennis", "ปิงปอง", "เทเบิลเทนนิส"].includes(raw)) {
+        return "Ping Pong";
+      }
+
+      return "Other";
+    };
+
+    const durationByType = Object.fromEntries(
+      workoutGroups.map(type => [type, 0])
+    );
+
+    const sessionsByType = Object.fromEntries(
+      workoutGroups.map(type => [type, 0])
+    );
+
+    const activeKcalByType = Object.fromEntries(
+      workoutGroups.map(type => [type, 0])
+    );
+
+    const calorieSessionsByType = Object.fromEntries(
+      workoutGroups.map(type => [type, 0])
+    );
 
     workouts.forEach(x => {
-      const key = x.activity_type || "Other";
-      types[key] = (types[key] || 0) + num(x.duration_min);
+      const type = normalizeWorkoutType(x.activity_type);
+
+      durationByType[type] += num(x.duration_min);
+      sessionsByType[type] += 1;
+
+      if (
+        x.calories_active != null &&
+        Number.isFinite(Number(x.calories_active))
+      ) {
+        activeKcalByType[type] += num(x.calories_active);
+        calorieSessionsByType[type] += 1;
+      }
     });
+
+    const activeTypes = workoutGroups.filter(
+      type => sessionsByType[type] > 0
+    );
+
+    const calorieTypes = workoutGroups.filter(
+      type => calorieSessionsByType[type] > 0
+    );
+
+    const workoutColors = [
+      "#8bd7a8",
+      "#b8a4ff",
+      "#e9b875",
+      "#78b7d6"
+    ];
+
+    /* Duration chart */
 
     destroyChart("training");
 
@@ -750,20 +817,19 @@ if ($("an-active-kcal-foot")) {
       {
         type: "bar",
         data: {
-          labels: Object.keys(types).length
-            ? Object.keys(types)
+          labels: activeTypes.length
+            ? activeTypes
             : ["ยังไม่มีข้อมูล"],
           datasets: [{
             label: "Minutes",
-            data: Object.keys(types).length
-              ? Object.values(types)
+            data: activeTypes.length
+              ? activeTypes.map(type => durationByType[type])
               : [0],
-            backgroundColor: [
-              "#8bd7a8",
-              "#b8a4ff",
-              "#e9b875",
-              "#78b7d6"
-            ],
+            backgroundColor: activeTypes.length
+              ? activeTypes.map(type =>
+                  workoutColors[workoutGroups.indexOf(type)]
+                )
+              : ["#46505c"],
             borderRadius: 7,
             maxBarThickness: 44
           }]
@@ -775,9 +841,7 @@ if ($("an-active-kcal-foot")) {
             legend: { display: false }
           },
           scales: {
-            x: {
-              grid: { display: false }
-            },
+            x: { grid: { display: false } },
             y: {
               beginAtZero: true,
               title: {
@@ -789,6 +853,66 @@ if ($("an-active-kcal-foot")) {
         }
       }
     );
+
+    /* Active Calories chart */
+
+    destroyChart("trainingCalories");
+
+    analyticsCharts.trainingCalories = new Chart(
+      $("training-calories-chart"),
+      {
+        type: "bar",
+        data: {
+          labels: calorieTypes.length
+            ? calorieTypes
+            : ["ยังไม่มีข้อมูลแคลอรี่"],
+          datasets: [{
+            label: "Active kcal",
+            data: calorieTypes.length
+              ? calorieTypes.map(type =>
+                  Number(activeKcalByType[type].toFixed(1))
+                )
+              : [0],
+            backgroundColor: calorieTypes.length
+              ? calorieTypes.map(type =>
+                  workoutColors[workoutGroups.indexOf(type)]
+                )
+              : ["#46505c"],
+            borderRadius: 7,
+            maxBarThickness: 44
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { grid: { display: false } },
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: "Active kcal"
+              }
+            }
+          }
+        }
+      }
+    );
+
+    $("training-calories-summary").textContent =
+      calorieTypes.length
+        ? calorieTypes.map(type =>
+            type + ": " +
+            activeKcalByType[type].toFixed(1) +
+            " kcal (" +
+            calorieSessionsByType[type] +
+            " ครั้ง)"
+          ).join(" · ")
+        : "ยังไม่มีรายการฝึกที่มีข้อมูล Active Calories";
+
 
   } else {
     ["nutrition", "macro", "body", "training"].forEach(destroyChart);
