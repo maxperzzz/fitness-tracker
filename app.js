@@ -631,6 +631,68 @@ function renderBodyProgress() {
     Number.isFinite(Number(r.body_fat_pct))
   );
 
+  const insightEl = $("body-insight-content");
+  const insightStatus = $("body-insight-status");
+  const insightCount = $("body-insight-count");
+
+  if (insightEl && insightStatus && insightCount) {
+    const firstComposition = compositionRecords[0];
+    const latestComposition = compositionRecords[compositionRecords.length - 1];
+
+    insightCount.textContent =
+      compositionRecords.length + " จุดข้อมูลที่มีทั้งน้ำหนักและ Body Fat";
+
+    if (compositionRecords.length < 2) {
+      insightStatus.textContent = "ข้อมูลยังไม่เพียงพอ";
+      insightStatus.className = "body-insight-status neutral";
+      insightEl.textContent =
+        "ต้องมีข้อมูลอย่างน้อย 2 ครั้งที่มีทั้งน้ำหนักและ Body Fat จึงจะเริ่มวิเคราะห์การเปลี่ยนแปลงได้";
+    } else {
+      const fatMass = r => num(r.weight_kg) * num(r.body_fat_pct) / 100;
+      const leanMass = r => num(r.weight_kg) - fatMass(r);
+      const fatDelta = fatMass(latestComposition) - fatMass(firstComposition);
+      const leanDelta = leanMass(latestComposition) - leanMass(firstComposition);
+      const weightDelta = num(latestComposition.weight_kg) - num(firstComposition.weight_kg);
+
+      const fmt = value => (value > 0 ? "+" : "") + value.toFixed(1) + " kg";
+      const facts = [
+        "น้ำหนัก " + fmt(weightDelta),
+        "Fat Mass " + fmt(fatDelta),
+        "Lean Body Mass " + fmt(leanDelta)
+      ];
+
+      let status = "ติดตามต่อ";
+      let tone = "neutral";
+      let explanation = "แนวโน้มยังไม่ชัดเจน ควรเก็บข้อมูลต่อเนื่องภายใต้เงื่อนไขการวัดที่ใกล้เคียงกัน";
+
+      if (fatDelta < -0.2 && leanDelta >= -0.3) {
+        status = "แนวโน้มดี";
+        tone = "positive";
+        explanation = "มวลไขมันที่คำนวณได้ลดลง ขณะที่มวลไร้ไขมันค่อนข้างคงที่หรือเพิ่มขึ้น เป็นทิศทางที่สอดคล้องกับการลดไขมันโดยรักษามวลไร้ไขมัน";
+      } else if (fatDelta < -0.2 && leanDelta < -0.3) {
+        status = "ควรติดตามมวลไร้ไขมัน";
+        tone = "warning";
+        explanation = "มวลไขมันลดลง แต่ค่ามวลไร้ไขมันก็ลดลงด้วย ควรติดตามแนวโน้มหลายครั้งและทบทวนพลังงาน โปรตีน และการฝึกแรงต้าน";
+      } else if (fatDelta > 0.2 && leanDelta < -0.3) {
+        status = "ควรทบทวนแผน";
+        tone = "warning";
+        explanation = "มวลไขมันเพิ่มขึ้นพร้อมกับมวลไร้ไขมันลดลงจากค่าที่คำนวณได้ ควรตรวจสอบความสม่ำเสมอของการวัดและติดตามข้อมูลเพิ่มก่อนปรับแผน";
+      } else if (fatDelta > 0.2) {
+        status = "ไขมันมีแนวโน้มเพิ่ม";
+        tone = "warning";
+        explanation = "มวลไขมันที่คำนวณได้เพิ่มขึ้นเมื่อเทียบกับข้อมูลแรก ควรดูแนวโน้มต่อเนื่อง ไม่ตัดสินจากการวัดเพียงครั้งเดียว";
+      }
+
+      insightStatus.textContent = status;
+      insightStatus.className = "body-insight-status " + tone;
+      insightEl.innerHTML =
+        '<p class="body-insight-message">' + explanation + '</p>' +
+        '<div class="body-insight-facts">' +
+        facts.map(f => '<span>' + esc(f) + '</span>').join("") +
+        '</div>';
+    }
+  }
+
   const compositionCanvas = $("body-composition-chart");
   if (compositionCanvas && compositionRecords.length) {
     analyticsCharts.bodyComposition = new Chart(compositionCanvas, {
