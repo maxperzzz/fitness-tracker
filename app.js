@@ -915,7 +915,7 @@ if ($("an-active-kcal-foot")) {
 
 
   } else {
-    ["nutrition", "macro", "body", "training"].forEach(destroyChart);
+   ["nutrition", "macro", "body", "training", "trainingCalories"].forEach(destroyChart);
   }
 
   /* Body summary */
@@ -941,20 +941,45 @@ if ($("an-active-kcal-foot")) {
       "ไม่มีข้อมูลร่างกายในช่วงเวลานี้";
   }
 
+  
   /* Training summary */
 
-  const sortedTypes = Object.entries(
-    workouts.reduce((a, x) => {
-      const key = x.activity_type || "Other";
-      a[key] = (a[key] || 0) + num(x.duration_min);
-      return a;
-    }, {})
-  ).sort((a, b) => b[1] - a[1]);
+  const summaryGroups = [
+    "Weight Training",
+    "Cardio",
+    "Ping Pong",
+    "Other"
+  ];
 
-  $("training-summary").textContent =
-    sortedTypes.length
-      ? sortedTypes.map(x => x[0] + ": " + x[1] + " นาที").join(" · ")
-      : "ยังไม่มีการฝึกในช่วงเวลานี้";
+  const summaryByType = Object.fromEntries(
+    summaryGroups.map(type => [type, 0])
+  );
+
+  workouts.forEach(x => {
+    const raw = String(x.activity_type || "").trim().toLowerCase();
+
+    const type =
+      ["weight training", "weight-training", "เวท", "เวทเทรนนิ่ง"].includes(raw)
+        ? "Weight Training"
+        : ["cardio", "คาร์ดิโอ"].includes(raw)
+          ? "Cardio"
+          : ["ping pong", "table tennis", "ปิงปอง", "เทเบิลเทนนิส"].includes(raw)
+            ? "Ping Pong"
+            : "Other";
+
+    summaryByType[type] += num(x.duration_min);
+  });
+
+  const sortedTypes = summaryGroups
+    .filter(type => summaryByType[type] > 0)
+    .sort((a, b) => summaryByType[b] - summaryByType[a]);
+
+  $("training-summary").textContent = sortedTypes.length
+    ? sortedTypes.map(type =>
+        type + ": " + summaryByType[type] + " นาที"
+      ).join(" · ")
+    : "ยังไม่มีการฝึกในช่วงเวลานี้";
+
 }
 
 /* =========================================================
