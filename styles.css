@@ -398,3 +398,45 @@
 @media(max-width:600px) {
   .protein-kpi>strong { font-size: 32px; }
 }
+
+
+/* Protein weekly insights */
+.protein-week-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+.protein-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.protein-summary-card span,
+.protein-summary-card small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.protein-summary-card strong {
+  font-size: 25px;
+  line-height: 1.2;
+}
+.protein-chart-panel {
+  margin: 14px 0;
+}
+.protein-chart-panel .chart-area {
+  height: 250px;
+}
+#protein-week-chart-note {
+  color: var(--muted);
+  font-size: 10px;
+  margin: 10px 0 0;
+}
+@media(max-width:700px) {
+  .protein-week-summary {
+    grid-template-columns: 1fr;
+  }
+  .protein-summary-card strong {
+    font-size: 22px;
+  }
+}
