@@ -22,8 +22,35 @@
 
   const storageKey = "fitness-custom-exercises-v1";
   let customExercises = [];
+  let cloudReady = false;
   try { customExercises = JSON.parse(localStorage.getItem(storageKey) || "[]"); } catch (_) { customExercises = []; }
   if (!Array.isArray(customExercises)) customExercises = [];
+  const persistLocal = () => localStorage.setItem(storageKey, JSON.stringify(customExercises));
+  async function syncCloudExercises() {
+    if (typeof db === "undefined" || !db || typeof currentUser === "undefined" || !currentUser) return;
+    try {
+      const result = await db.from("custom_exercises").select("id,name,category").eq("user_id", currentUser.id).order("name");
+      if (result.error) throw result.error;
+      const cloud = (result.data || []).map(row => ({id:row.id,name:row.name,group:row.category}));
+      const known = new Set(cloud.map(item => item.name.toLowerCase()));
+      const migrate = customExercises.filter(item => !known.has(String(item.name).toLowerCase()));
+      if (migrate.length) {
+        const saved = await db.from("custom_exercises").upsert(migrate.map(item => ({user_id:currentUser.id,name:item.name,category:item.group})), {onConflict:"user_id,name",ignoreDuplicates:true});
+        if (saved.error) throw saved.error;
+        const again = await db.from("custom_exercises").select("id,name,category").eq("user_id",currentUser.id).order("name");
+        if (again.error) throw again.error;
+        customExercises = (again.data || []).map(row => ({id:row.id,name:row.name,group:row.category}));
+      } else customExercises = cloud;
+      cloudReady = true;
+      persistLocal(); refreshSelects(); renderLibrary(); setStatus("ซิงก์กับบัญชีแล้ว · ใช้ได้ทุกอุปกรณ์");
+    } catch (error) { console.warn("Custom exercise sync:",error.message); setStatus("ซิงก์ Cloud ไม่สำเร็จ · ใช้ข้อมูลในเครื่อง",true); }
+  }
+  async function saveCloudExercise(item) {
+    if (!cloudReady || !currentUser) return item;
+    const result = await db.from("custom_exercises").upsert({user_id:currentUser.id,name:item.name,category:item.group},{onConflict:"user_id,name"}).select("id,name,category").single();
+    if (result.error) throw result.error;
+    return {id:result.data.id,name:result.data.name,group:result.data.category};
+  }
 
   const builder = document.createElement("section");
   builder.id = "workout-v2-builder";
@@ -46,7 +73,7 @@
         <label>หมวดหมู่<select id="workout-v2-custom-group"><option>อก</option><option>หลัง</option><option>ไหล่</option><option>แขนหน้า</option><option>แขนหลัง</option><option>ขา</option><option>แกนกลาง</option><option>คาร์ดิโอ / อื่น ๆ</option><option>กำหนดเอง</option></select></label>
       </div>
       <div class="workout-v2-custom-buttons"><button type="button" class="primary" id="workout-v2-custom-save">บันทึกท่าใหม่</button><button type="button" class="secondary" id="workout-v2-custom-cancel">ยกเลิก</button></div>
-      <p class="workout-v2-hint">รายการท่าที่สร้างเองจะจำไว้ในเบราว์เซอร์นี้</p>
+      <p class="workout-v2-hint" id="workout-v2-custom-status">กำลังเชื่อมต่อคลังท่า...</p><div id="workout-v2-library" class="workout-v2-library"></div>
     </div>
     <p class="workout-v2-hint">ข้อมูลจะถูกบันทึกในประวัติเดิม โดยไม่สร้างตารางใหม่และไม่กระทบข้อมูลเก่า</p>`;
   const notesLabel = notes.closest("label");
@@ -57,6 +84,9 @@
   const count = builder.querySelector("#workout-v2-count");
   const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 
+  function setStatus(message, warning=false) { const el=builder.querySelector("#workout-v2-custom-status"); if(el){el.textContent=message;el.classList.toggle("is-warning",warning);} }
+  function refreshSelects() { list.querySelectorAll("[data-exercise-name]").forEach(select=>{const selected=select.value;select.innerHTML=options(selected);select.value=selected;}); }
+  function renderLibrary() { const target=builder.querySelector("#workout-v2-library"); if(!target)return; if(!customExercises.length){target.textContent="ยังไม่มีท่าที่สร้างเอง";return;} target.innerHTML=customExercises.map((item,i)=>"<div class=\"workout-v2-library-item\"><span><b>"+esc(item.name)+"</b><small>"+esc(item.group)+"</small></span><button type=\"button\" data-edit-custom=\""+i+"\">แก้ไข</button><button type=\"button\" data-delete-custom=\""+i+"\">ลบ</button></div>").join(""); }
   function options(selected = "") {
     const groups = {};
     EXERCISES.forEach(([group,name]) => (groups[group] ||= []).push(name));
@@ -141,18 +171,14 @@
     customForm.hidden = true;
     customName.value = "";
   });
-  builder.querySelector("#workout-v2-custom-save").addEventListener("click", () => {
+  builder.querySelector("#workout-v2-custom-save").addEventListener("click", async () => {
     const name = customName.value.trim();
     const group = customGroup.value;
     if (!name) { customName.focus(); return; }
     const exists = [...EXERCISES, ...customExercises].some(([g,n]) => n.toLowerCase() === name.toLowerCase());
     if (exists) { customName.setCustomValidity("มีชื่อท่านี้อยู่แล้ว"); customName.reportValidity(); return; }
     customName.setCustomValidity("");
-    customExercises.push({group,name});
-    localStorage.setItem(storageKey, JSON.stringify(customExercises));
-    customForm.hidden = true;
-    customName.value = "";
-    addExercise({name, sets:[{},{},{}]});
+    try { const saved=await saveCloudExercise({group,name}); customExercises.push(saved); persistLocal(); refreshSelects(); renderLibrary(); customForm.hidden=true; customName.value=""; addExercise({name,sets:[{},{},{}]}); setStatus(cloudReady ? "บันทึกลง Cloud แล้ว" : "บันทึกในเครื่องแล้ว · รอซิงก์ Cloud"); } catch(error) { window.alert("บันทึกท่าไม่สำเร็จ: "+error.message); }
   });
 
   // Build data before the existing app.js submit handler reads the form.
@@ -172,4 +198,13 @@
     addExercise();
   });
   addExercise();
+  renderLibrary();
+  builder.querySelector("#workout-v2-library").addEventListener("click", async event => {
+    const edit=event.target.closest("[data-edit-custom]"); const remove=event.target.closest("[data-delete-custom]");
+    const index=Number(edit ? edit.dataset.editCustom : remove ? remove.dataset.deleteCustom : -1); const item=customExercises[index]; if(!item)return;
+    if(edit){const name=window.prompt("แก้ไขชื่อท่า",item.name);if(name===null)return;const group=window.prompt("แก้ไขหมวดหมู่",item.group);if(group===null)return;const clean=name.trim();if(!clean)return;try{const saved=await saveCloudExercise({name:clean,group:group.trim()||item.group});if(item.id&&cloudReady&&item.name!==saved.name){const gone=await db.from("custom_exercises").delete().eq("id",item.id).eq("user_id",currentUser.id);if(gone.error)throw gone.error;}customExercises[index]=saved;persistLocal();refreshSelects();renderLibrary();}catch(error){window.alert("แก้ไขไม่สำเร็จ: "+error.message);}}
+    if(remove&&window.confirm("ลบ "+item.name+" จากคลังท่าใช่ไหม?")){try{if(item.id&&cloudReady){const gone=await db.from("custom_exercises").delete().eq("id",item.id).eq("user_id",currentUser.id);if(gone.error)throw gone.error;}customExercises.splice(index,1);persistLocal();refreshSelects();renderLibrary();}catch(error){window.alert("ลบไม่สำเร็จ: "+error.message);}}
+  });
+  document.addEventListener("fitness-data-loaded",syncCloudExercises);
+  if(typeof currentUser!=="undefined"&&currentUser)syncCloudExercises();
 })();
