@@ -39,6 +39,7 @@
         .from("workout_logs")
         .select("id,workout_on,activity_type,name,duration_min,intensity,calories_total")
         .eq("user_id", user.id)
+        .order("workout_on", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(30);
       if (error) throw error;
