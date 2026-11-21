@@ -175,7 +175,7 @@
     const name = customName.value.trim();
     const group = customGroup.value;
     if (!name) { customName.focus(); return; }
-    const exists = [...EXERCISES, ...customExercises].some(([g,n]) => n.toLowerCase() === name.toLowerCase());
+    const exists = EXERCISES.some(([g,n]) => n.toLowerCase() === name.toLowerCase()) || customExercises.some(item => item.name.toLowerCase() === name.toLowerCase());
     if (exists) { customName.setCustomValidity("มีชื่อท่านี้อยู่แล้ว"); customName.reportValidity(); return; }
     customName.setCustomValidity("");
     try { const saved=await saveCloudExercise({group,name}); customExercises.push(saved); persistLocal(); refreshSelects(); renderLibrary(); customForm.hidden=true; customName.value=""; addExercise({name,sets:[{},{},{}]}); setStatus(cloudReady ? "บันทึกลง Cloud แล้ว" : "บันทึกในเครื่องแล้ว · รอซิงก์ Cloud"); } catch(error) { window.alert("บันทึกท่าไม่สำเร็จ: "+error.message); }
