@@ -37,7 +37,7 @@
       if (authError || !user) return;
       const { data, error } = await client
         .from("workout_logs")
-        .select("id,calories_total")
+        .select("id,calories_active,calories_total")
         .eq("user_id", user.id)
         .in("id", cards.map(card => card.dataset.workoutCardId));
       if (error) throw error;
@@ -46,8 +46,15 @@
         const record = byId.get(card.dataset.workoutCardId);
         if (!record) return;
         const calories = card.querySelector("[data-workout-calories]");
-        if (calories) calories.textContent = record.calories_total == null
-          ? "แคลอรีรวม —" : "แคลอรีรวม " + Math.round(Number(record.calories_total)) + " kcal";
+        if (calories) {
+          if (record.calories_active != null) {
+            calories.textContent = "Active " + Math.round(Number(record.calories_active)) +
+              " kcal · รวม " + (record.calories_total == null ? "—" : Math.round(Number(record.calories_total))) + " kcal";
+          } else {
+            calories.textContent = record.calories_total == null
+              ? "แคลอรีรวม —" : "แคลอรีรวม " + Math.round(Number(record.calories_total)) + " kcal";
+          }
+        }
       });
     } catch (err) {
       console.error("Workout card details:", err);
