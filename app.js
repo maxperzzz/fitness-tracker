@@ -458,27 +458,28 @@ function workoutHistoryHtml(records) {
     String(b.workout_on || "").localeCompare(String(a.workout_on || "")) ||
     String(b.created_at || "").localeCompare(String(a.created_at || ""))
   );
-  const rows = sortedRecords.map(record => {
+  if (!sortedRecords.length) return "ยังไม่มีข้อมูล";
+
+  return `<div class="workout-card-list">${sortedRecords.map(record => {
     const raw = String(record.notes || "");
     const match = raw.match(/\\[WORKOUT_V2_JSON\\]([\\s\\S]*?)\\[\\/WORKOUT_V2_JSON\\]/);
     let exercises = [];
-    if (match) {
-      try { exercises = JSON.parse(match[1]); } catch (_) {}
-    }
+    if (match) { try { exercises = JSON.parse(match[1]); } catch (_) {} }
     const legacy = raw.replace(/\\[WORKOUT_V2_JSON\\][\\s\\S]*?\\[\\/WORKOUT_V2_JSON\\]/g, "").trim();
-    const details = exercises.length
-      ? exercises.map(ex => {
-          const sets = (ex.sets || []).map((set, i) =>
-            `<span class="workout-history-set">Set ${i + 1}: ${esc(set.reps || "—")} reps${set.weight !== "" && set.weight != null ? " · " + esc(set.weight) + " kg" : ""}</span>`
-          ).join("");
-          return `<div class="workout-history-exercise"><strong>${esc(ex.name)}</strong><div class="workout-history-sets">${sets}</div></div>`;
-        }).join("")
-      : esc(legacy || "—");
-    return `<tr><td>${esc(record.workout_on || "—")}</td><td>${esc(record.activity_type || "—")}</td><td>${esc(record.name || "—")}</td><td>${num(record.duration_min)} นาที</td><td class="workout-history-details">${details}</td></tr>`;
-  }).join("");
-  return sortedRecords.length
-    ? `<div class="table-wrap"><table><thead><tr><th>วันที่</th><th>ประเภท</th><th>กิจกรรม</th><th>เวลา</th><th>รายละเอียดท่าฝึก / แต่ละเซต</th></tr></thead><tbody>${rows}</tbody></table></div>`
-    : "ยังไม่มีข้อมูล";
+    const setCount = exercises.reduce((sum, ex) => sum + (ex.sets || []).length, 0);
+    const exerciseHtml = exercises.length ? exercises.map(ex => {
+      const sets = (ex.sets || []).map((set, index) =>
+        `<span class="workout-card-set"><b>Set ${index + 1}</b><span>${esc(set.reps || "—")} reps</span><small>${set.weight !== "" && set.weight != null ? esc(set.weight) + " kg" : "ไม่ระบุน้ำหนัก"}</small></span>`
+      ).join("");
+      return `<div class="workout-card-exercise"><strong>${esc(ex.name)}</strong><div class="workout-card-sets">${sets}</div></div>`;
+    }).join("") : `<p class="workout-card-legacy">${esc(legacy || "ไม่มีรายละเอียดท่าฝึก")}</p>`;
+    return `<article class="workout-history-card" data-workout-card-id="${esc(record.id)}">
+      <div class="workout-card-top"><div><span class="workout-card-date">${esc(record.workout_on || "ไม่ระบุวันที่")}</span><h4>${esc(record.name || "Workout")}</h4></div><span class="workout-card-duration">${num(record.duration_min)} นาที</span></div>
+      <div class="workout-card-meta"><span>${esc(record.activity_type || "ไม่ระบุประเภท")}</span><span>${exercises.length} ท่า</span><span>${setCount} เซต</span></div>
+      <div class="workout-card-exercise-list">${exerciseHtml}</div>
+      <div class="workout-card-footer"><span class="workout-card-calories" data-workout-calories>แคลอรีรวม —</span><button type="button" class="workout-delete-btn" data-workout-delete-id="${esc(record.id)}">ลบประวัติ</button></div>
+    </article>`;
+  }).join("")}</div>`;
 }
 
 function renderAll() {
