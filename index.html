@@ -121,9 +121,18 @@
           <h3>บันทึกโปรตีนรายวัน</h3>
           <p class="muted">หนึ่งรายการต่อวัน หากบันทึกวันที่เดิมอีกครั้ง ระบบจะปรับยอดเป็นค่าใหม่</p>
           <form id="protein-form" class="form-grid">
-            <label>วันที่<input id="protein-date" name="logged_on" type="date" required></label>
-            <label>โปรตีนรวม (กรัม)<input id="protein-grams" name="protein_g" type="number" min="0" max="1000" step=".1" required placeholder="เช่น 145"></label>
-            <button class="primary wide" type="submit">บันทึกโปรตีน</button>
+            <label class="wide">วันที่<input id="protein-date" name="logged_on" type="date" required></label>
+            <div class="wide">
+              <h4>เลือกแหล่งโปรตีนที่กินวันนี้</h4>
+              <p class="muted">ติ๊กอาหารที่กิน แล้วใส่จำนวนหน่วย ระบบรวมโปรตีนให้อัตโนมัติ</p>
+              <div id="protein-food-list" class="protein-food-list"></div>
+            </div>
+            <label class="wide">โปรตีนอื่นที่ไม่ได้อยู่ในรายการ (กรัม)
+              <input id="protein-other-grams" type="number" min="0" max="1000" step=".1" placeholder="เช่น ปลา เต้าหู้ หรืออาหารอื่น">
+            </label>
+            <div class="protein-draft-total wide">รวมจากรายการที่เลือก <strong id="protein-draft-total">0.0 g</strong></div>
+            <input id="protein-grams" name="protein_g" type="hidden" value="0">
+            <button class="primary wide" type="submit">บันทึกโปรตีนวันนี้</button>
           </form>
         </div>
         <article class="panel">
