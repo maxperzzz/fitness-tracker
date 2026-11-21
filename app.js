@@ -1213,7 +1213,20 @@ function bodyTableHtml(data) {
 
   if (!data.length) return "ยังไม่มีข้อมูล";
 
+  const sortedData = [...data].sort((a, b) =>
+    String(b.measured_on || "").localeCompare(
+      String(a.measured_on || "")
+    )
+  );
+
   return `
+    <div class="body-history-summary">
+      <span>ทั้งหมด ${data.length} รายการ</span>
+      ${data.length > 30
+        ? "<span>แสดง 30 รายการล่าสุด</span>"
+        : ""}
+    </div>
+
     <table>
       <thead>
         <tr>
@@ -1224,7 +1237,7 @@ function bodyTableHtml(data) {
         </tr>
       </thead>
       <tbody>
-        ${data.slice(0, 30).map(r =>
+        ${sortedData.slice(0, 30).map(r =>
           `<tr>
             <td>${esc(r.measured_on)}</td>
             <td>${esc(r.weight_kg)}</td>
@@ -1247,8 +1260,24 @@ async function deleteBodyMetric(id) {
 
   if (!id || !currentUser) return;
 
-  if (!confirm("ยืนยันลบข้อมูลร่างกายรายการนี้ใช่ไหม?")) return;
+  const record = cache.body.find(
+    r => String(r.id) === String(id)
+  );
 
+  if (!record) {
+    toast("ไม่พบข้อมูลที่ต้องการลบ", true);
+    return;
+  }
+
+  const details = [
+    `วันที่: ${record.measured_on}`,
+    `น้ำหนัก: ${record.weight_kg} kg`,
+    `Body Fat: ${record.body_fat_pct ?? "—"}%`
+  ].join("\n");
+
+  if (!confirm(
+    `ยืนยันลบข้อมูลร่างกายรายการนี้?\n\n${details}\n\nการลบไม่สามารถย้อนกลับได้`
+  )) return;
   try {
 
     const { error } = await db
