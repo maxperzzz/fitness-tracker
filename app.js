@@ -1976,12 +1976,32 @@ $("workout-form").addEventListener("submit", async e => {
 
     const x = formObject(e.target);
 
+    const duration = num(x.duration);
+    const activityType = x.type || "Other";
+    const latestBody = [...cache.body].filter(row => num(row.weight_kg) > 0)
+      .sort((a, b) => String(b.measured_on || "").localeCompare(String(a.measured_on || "")))[0];
+    const bodyWeight = latestBody ? num(latestBody.weight_kg) : null;
+    // MET defaults based on the 2024 Adult Compendium where a matching activity is available.
+    // Weight training: multiple exercises, 8-15 reps = 3.5 MET; table tennis = 4.0 MET.
+    const metByType = { "Weight Training": 3.5, "Cardio": 5.0, "Ping Pong": 4.0, "Other": 3.0 };
+    const metValue = metByType[activityType] || 3.0;
+    const caloriesTotal = bodyWeight && duration > 0
+      ? Math.round(metValue * 3.5 * bodyWeight / 200 * duration)
+      : null;
+    const metaMarker = "[WORKOUT_META]" + JSON.stringify({
+      met: metValue,
+      body_weight_kg: bodyWeight,
+      calorie_method: "MET x 3.5 x body_weight_kg / 200 x duration_min",
+      met_source: "2024 Adult Compendium"
+    }) + "[/WORKOUT_META]";
+    const savedNotes = [x.notes || "", metaMarker].filter(Boolean).join("\\n\\n");
+
     await insert("workout_logs", {
-      activity_type: x.type || "Other",
+      activity_type: activityType,
       name: x.name,
-      duration_min: num(x.duration),
-      intensity: x.intensity || "ปานกลาง",
-      notes: x.notes || ""
+      duration_min: duration,
+      calories_total: caloriesTotal,
+      notes: savedNotes
     });
 
     e.target.reset();
