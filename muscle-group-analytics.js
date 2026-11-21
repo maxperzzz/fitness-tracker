@@ -1,6 +1,6 @@
 /* Muscle Group Analytics
  * Uses structured workout details already stored in workout_logs.notes.
- * Set counts are attributed to each exercise's primary category.
+ * Primary category attribution; volume excludes bodyweight/missing-weight sets.
  */
 (() => {
   "use strict";
@@ -18,17 +18,14 @@
   };
   const GROUPS = ["อก","หลัง","ไหล่","แขนหน้า","แขนหลัง","ขา","แกนกลาง"];
   const COLORS = ["#78c995","#69a9d8","#b49be8","#e5ad70","#df8c9c","#d2c56d","#73c8c1"];
-  let chart = null;
-  let weeks = [];
+  let setChart = null, volumeChart = null, weeks = [];
 
-  function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
   function dateOf(row){return String(row.workout_on||row.created_at||"").slice(0,10);}
-  function parseDate(s){const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d,12);}
   function key(d){return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");}
   function monday(d){const x=new Date(d);x.setHours(12,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x;}
   function getGroups(){
     const map={...BUILTIN};
-    try{const custom=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");if(Array.isArray(custom))custom.forEach(x=>{if(x?.name&&x?.group)map[x.name]=x.group;});}catch(_){}
+    try{const custom=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");if(Array.isArray(custom))custom.forEach(x=>{if(x&&x.name&&x.group)map[x.name]=x.group;});}catch(_){}
     return map;
   }
   function readData(){
@@ -40,14 +37,18 @@
       let exercises;try{exercises=JSON.parse(match[1]);}catch(_){return;}
       const date=dateOf(w);if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
       const counts=Object.fromEntries(GROUPS.map(g=>[g,0]));
+      const volume=Object.fromEntries(GROUPS.map(g=>[g,0]));
+      const days=Object.fromEntries(GROUPS.map(g=>[g,new Set()]));
       let total=0;
       (Array.isArray(exercises)?exercises:[]).forEach(ex=>{
         const group=category[String(ex.name||"").trim()];
         if(!GROUPS.includes(group))return;
         const valid=(Array.isArray(ex.sets)?ex.sets:[]).filter(s=>Number(s.reps)>0);
         counts[group]+=valid.length;total+=valid.length;
+        if(valid.length)days[group].add(date);
+        volume[group]+=valid.reduce((sum,s)=>sum+(Number(s.reps)||0)*(Number(s.weight)||0),0);
       });
-      if(total)sessions.push({date,counts,total});
+      if(total)sessions.push({date,counts,volume,days:Object.fromEntries(GROUPS.map(g=>[g,[...days[g]]])),total});
     });
     return sessions;
   }
@@ -65,23 +66,30 @@
     const week=weeks[Number($("muscle-week-select").value)||0];
     const rows=all.filter(x=>x.date>=week.start&&x.date<=week.end);
     const totals=Object.fromEntries(GROUPS.map(g=>[g,rows.reduce((n,r)=>n+r.counts[g],0)]));
+    const volumes=Object.fromEntries(GROUPS.map(g=>[g,rows.reduce((n,r)=>n+(r.volume[g]||0),0)]));
+    const frequencies=Object.fromEntries(GROUPS.map(g=>[g,new Set(rows.flatMap(r=>r.days[g]||[])).size]));
     const total=Object.values(totals).reduce((a,b)=>a+b,0);
     const active=GROUPS.filter(g=>totals[g]>0).length;
     $("muscle-total-sets").textContent=total.toLocaleString()+" เซต";
     $("muscle-active-groups").textContent=active+" / "+GROUPS.length+" กลุ่ม";
     $("muscle-training-days").textContent=new Set(rows.map(r=>r.date)).size+" วัน";
-    $("muscle-group-list").innerHTML=GROUPS.map((g,i)=>'<div class="muscle-group-row"><span class="muscle-group-dot" style="background:'+COLORS[i]+'"></span><strong>'+g+'</strong><span>'+totals[g]+' เซต</span><div class="muscle-group-track"><i style="width:'+(total?totals[g]/Math.max(...Object.values(totals),1)*100:0)+'%;background:'+COLORS[i]+'"></i></div></div>').join("");
     const ctx=$("muscle-group-chart");
     if(ctx&&typeof Chart!=="undefined"){
-      if(chart)chart.destroy();
-      chart=new Chart(ctx,{type:"bar",data:{labels:GROUPS,datasets:[{label:"จำนวนเซต",data:GROUPS.map(g=>totals[g]),backgroundColor:COLORS,borderRadius:6}]},options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{precision:0,color:"#8795a5"},grid:{color:"rgba(140,155,170,.1)"}},y:{ticks:{color:"#aab6c4"},grid:{display:false}}}}});
+      if(setChart)setChart.destroy();
+      setChart=new Chart(ctx,{type:"bar",data:{labels:GROUPS,datasets:[{label:"จำนวนเซต",data:GROUPS.map(g=>totals[g]),backgroundColor:COLORS,borderRadius:6}]},options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{precision:0,color:"#8795a5"},grid:{color:"rgba(140,155,170,.1)"}},y:{ticks:{color:"#aab6c4"},grid:{display:false}}}}});
     }
-    $("muscle-group-note").textContent=total?"นับเฉพาะเซตที่มีการกรอก Reps และจัดเข้ากลุ่มกล้ามเนื้อได้ · สัปดาห์เริ่มวันจันทร์":"ยังไม่มีข้อมูลการฝึกที่จัดกลุ่มได้ในสัปดาห์นี้";
+    const volumeCtx=$("muscle-volume-chart");
+    if(volumeCtx&&typeof Chart!=="undefined"){
+      if(volumeChart)volumeChart.destroy();
+      volumeChart=new Chart(volumeCtx,{type:"bar",data:{labels:GROUPS,datasets:[{label:"Volume Load (kg)",data:GROUPS.map(g=>Math.round(volumes[g])),backgroundColor:COLORS,borderRadius:6}]},options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{color:"#8795a5"},grid:{color:"rgba(140,155,170,.1)"}},y:{ticks:{color:"#aab6c4"},grid:{display:false}}}}});
+    }
+    $("muscle-group-list").innerHTML=GROUPS.map((g,i)=>'<div class="muscle-group-row"><span class="muscle-group-dot" style="background:'+COLORS[i]+'"></span><strong>'+g+'</strong><span>'+totals[g]+' เซต</span><span>'+Math.round(volumes[g]).toLocaleString()+' kg</span><span>'+frequencies[g]+' วัน</span><div class="muscle-group-track"><i style="width:'+(total?totals[g]/Math.max(...Object.values(totals),1)*100:0)+'%;background:'+COLORS[i]+'"></i></div></div>').join("");
+    $("muscle-group-note").textContent=total?"จำนวนเซตนับเฉพาะเซตที่มี Reps · Volume Load คำนวณจาก Reps × Weight เฉพาะเซตที่มีน้ำหนัก · ความถี่นับจำนวนวันที่ฝึกกลุ่มนั้นอย่างน้อย 1 เซต":"ยังไม่มีข้อมูลการฝึกที่จัดกลุ่มได้ในสัปดาห์นี้";
   }
   function install(){
     const page=$("page-workout");if(!page||$("muscle-group-analytics"))return;
     const panel=document.createElement("article");panel.id="muscle-group-analytics";panel.className="panel muscle-group-analytics-panel";
-    panel.innerHTML='<div class="workout-entry-heading"><div><span class="workout-section-step">04 / MUSCLE BALANCE</span><h3>Muscle Group Analytics</h3><p>ภาพรวมปริมาณการฝึกแยกตามกลุ่มกล้ามเนื้อ</p></div></div><label class="muscle-week-picker">เลือกสัปดาห์<select id="muscle-week-select"></select></label><div class="muscle-group-kpis"><div><small>จำนวนเซตรวม</small><strong id="muscle-total-sets">—</strong></div><div><small>กลุ่มที่ได้ฝึก</small><strong id="muscle-active-groups">—</strong></div><div><small>วันฝึก</small><strong id="muscle-training-days">—</strong></div></div><div class="muscle-group-chart-wrap"><canvas id="muscle-group-chart"></canvas></div><div id="muscle-group-list" class="muscle-group-list"></div><p id="muscle-group-note" class="exercise-analytics-note"></p>';
+    panel.innerHTML='<div class="workout-entry-heading"><div><span class="workout-section-step">04 / MUSCLE BALANCE</span><h3>Muscle Group Analytics</h3><p>ดูจำนวนเซต ปริมาณงาน และความถี่ในการฝึกแต่ละกลุ่มกล้ามเนื้อ</p></div></div><label class="muscle-week-picker">เลือกสัปดาห์<select id="muscle-week-select"></select></label><div class="muscle-group-kpis"><div><small>จำนวนเซตรวม</small><strong id="muscle-total-sets">—</strong></div><div><small>กลุ่มที่ได้ฝึก</small><strong id="muscle-active-groups">—</strong></div><div><small>วันฝึกทั้งหมด</small><strong id="muscle-training-days">—</strong></div></div><h4 class="muscle-chart-title">จำนวนเซตต่อกลุ่ม</h4><div class="muscle-group-chart-wrap"><canvas id="muscle-group-chart"></canvas></div><h4 class="muscle-chart-title">Training Volume · kg</h4><div class="muscle-group-chart-wrap"><canvas id="muscle-volume-chart"></canvas></div><div class="muscle-group-list-heading"><strong>รายละเอียดรายกลุ่ม</strong><span>เซต · Volume · ความถี่</span></div><div id="muscle-group-list" class="muscle-group-list"></div><p id="muscle-group-note" class="exercise-analytics-note"></p>';
     const progression=$("exercise-analytics");
     if(progression)progression.insertAdjacentElement("afterend",panel);else page.appendChild(panel);
     $("muscle-week-select").addEventListener("change",render);
