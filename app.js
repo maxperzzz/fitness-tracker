@@ -737,12 +737,11 @@ if ($("an-active-kcal-foot")) {
 
     /* Workout Analytics: four standard categories */
 
-    const workoutGroups = [
-      "Weight Training",
-      "Cardio",
-      "Ping Pong",
-      "Other"
-    ];
+  const workoutGroups = [
+  "Weight Training",
+  "Cardio",
+  "Other"
+];"
 
     const normalizeWorkoutType = value => {
       const raw = String(value || "").trim().toLowerCase();
@@ -753,10 +752,6 @@ if ($("an-active-kcal-foot")) {
 
       if (["cardio", "คาร์ดิโอ"].includes(raw)) {
         return "Cardio";
-      }
-
-      if (["ping pong", "table tennis", "ปิงปอง", "เทเบิลเทนนิส"].includes(raw)) {
-        return "Ping Pong";
       }
 
       return "Other";
@@ -944,12 +939,11 @@ if ($("an-active-kcal-foot")) {
   
   /* Training summary */
 
-  const summaryGroups = [
-    "Weight Training",
-    "Cardio",
-    "Ping Pong",
-    "Other"
-  ];
+const summaryGroups = [
+  "Weight Training",
+  "Cardio",
+  "Other"
+];
 
   const summaryByType = Object.fromEntries(
     summaryGroups.map(type => [type, 0])
@@ -959,13 +953,12 @@ if ($("an-active-kcal-foot")) {
     const raw = String(x.activity_type || "").trim().toLowerCase();
 
     const type =
-      ["weight training", "weight-training", "เวท", "เวทเทรนนิ่ง"].includes(raw)
-        ? "Weight Training"
-        : ["cardio", "คาร์ดิโอ"].includes(raw)
-          ? "Cardio"
-          : ["ping pong", "table tennis", "ปิงปอง", "เทเบิลเทนนิส"].includes(raw)
-            ? "Ping Pong"
-            : "Other";
+  const type =
+  ["weight training", "weight-training", "เวท", "เวทเทรนนิ่ง"].includes(raw)
+    ? "Weight Training"
+    : ["cardio", "คาร์ดิโอ"].includes(raw)
+      ? "Cardio"
+      : "Other";
 
     summaryByType[type] += num(x.duration_min);
   });
@@ -979,6 +972,154 @@ if ($("an-active-kcal-foot")) {
         type + ": " + summaryByType[type] + " นาที"
       ).join(" · ")
     : "ยังไม่มีการฝึกในช่วงเวลานี้";
+
+  /* Workout Performance Comparison */
+
+  const previousStart = shiftDate(days * 2 - 1);
+  const previousEnd = shiftDate(days);
+
+  const previousWorkouts = cache.workouts.filter(
+    x => x.workout_on >= previousStart &&
+         x.workout_on <= previousEnd
+  );
+
+  const performanceGroups = [
+    "Weight Training",
+    "Cardio",
+    "Other"
+  ];
+
+  const classifyPerformance = value => {
+    const raw = String(value || "").trim().toLowerCase();
+
+    if (["weight training", "weight-training", "เวท", "เวทเทรนนิ่ง"].includes(raw)) {
+      return "Weight Training";
+    }
+
+    if (["cardio", "คาร์ดิโอ"].includes(raw)) {
+      return "Cardio";
+    }
+
+    return "Other";
+  };
+
+  const summarizePerformance = rows => {
+    const result = Object.fromEntries(
+      performanceGroups.map(type => [
+        type,
+        { sessions: 0, minutes: 0, calories: 0 }
+      ])
+    );
+
+    rows.forEach(x => {
+      const item = result[classifyPerformance(x.activity_type)];
+
+      item.sessions += 1;
+      item.minutes += num(x.duration_min);
+      item.calories += x.calories_active == null
+        ? 0
+        : num(x.calories_active);
+    });
+
+    return result;
+  };
+
+  const currentPerformance = summarizePerformance(workouts);
+  const previousPerformance = summarizePerformance(previousWorkouts);
+
+  const sumPerformance = (data, key) =>
+    performanceGroups.reduce(
+      (sum, type) => sum + data[type][key], 0
+    );
+
+  const metrics = [
+    ["จำนวนครั้ง", "sessions", " ครั้ง"],
+    ["เวลาฝึกรวม", "minutes", " นาที"],
+    ["Active Calories", "calories", " kcal"]
+  ];
+
+  const metricHtml = metrics.map(([label, key, unit]) => {
+    const current = sumPerformance(currentPerformance, key);
+    const previous = sumPerformance(previousPerformance, key);
+
+    const value = key === "calories"
+      ? current.toFixed(1)
+      : current.toLocaleString();
+
+    let comparison = "ไม่มีข้อมูลช่วงก่อนหน้า";
+
+    if (previous > 0) {
+      const change = ((current - previous) / previous) * 100;
+      const sign = change > 0 ? "+" : "";
+
+      comparison = sign + change.toFixed(1) + "%";
+    } else if (current === 0) {
+      comparison = "ยังไม่มีข้อมูล";
+    } else {
+      comparison = "มีข้อมูลเฉพาะช่วงปัจจุบัน";
+    }
+
+    return `
+      <div class="workout-compare-metric">
+        <span>${label}</span>
+        <strong>${value}${unit}</strong>
+        <small>ช่วงก่อน: ${
+          key === "calories"
+            ? previous.toFixed(1)
+            : previous.toLocaleString()
+        }${unit} · ${comparison}</small>
+      </div>
+    `;
+  }).join("");
+
+  const comparisonRows = performanceGroups
+    .filter(type =>
+      currentPerformance[type].sessions > 0 ||
+      previousPerformance[type].sessions > 0
+    )
+    .map(type => {
+      const current = currentPerformance[type];
+      const previous = previousPerformance[type];
+
+      return `
+        <tr>
+          <th>${type}</th>
+          <td>${current.sessions} / ${previous.sessions}</td>
+          <td>${current.minutes} / ${previous.minutes}</td>
+          <td>${current.calories.toFixed(1)} / ${previous.calories.toFixed(1)}</td>
+        </tr>
+      `;
+    }).join("");
+
+  if ($("workout-comparison-content")) {
+    $("workout-comparison-content").innerHTML = `
+      <div class="workout-compare-metrics">
+        ${metricHtml}
+      </div>
+
+      <div class="workout-compare-table-wrap">
+        <table class="workout-compare-table">
+          <thead>
+            <tr>
+              <th>ประเภท</th>
+              <th>จำนวนครั้ง<br>ปัจจุบัน / ก่อนหน้า</th>
+              <th>นาที<br>ปัจจุบัน / ก่อนหน้า</th>
+              <th>Active kcal<br>ปัจจุบัน / ก่อนหน้า</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${comparisonRows ||
+              '<tr><td colspan="4">ยังไม่มีข้อมูลการฝึก</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+
+      <p class="chart-note">
+        ช่วงปัจจุบัน ${start} ถึง ${end}
+        · ช่วงก่อนหน้า ${previousStart} ถึง ${previousEnd}
+      </p>
+    `;
+  }
 
 }
 
