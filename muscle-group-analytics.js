@@ -6,6 +6,7 @@
   "use strict";
   const $ = id => document.getElementById(id);
   const STORAGE_KEY = "fitness-custom-exercises-v1";
+  const TARGET_KEY = "fitness-muscle-alert-settings-v1";
   const BUILTIN = {
     "Bench Press":"อก","Incline Bench Press":"อก","Decline Bench Press":"อก","Dumbbell Bench Press":"อก","Incline Dumbbell Press":"อก","Chest Fly":"อก","Cable Fly":"อก","Pec Deck":"อก",
     "Lat Pulldown":"หลัง","Pull Up":"หลัง","Chin Up":"หลัง","Seated Cable Row":"หลัง","Barbell Row":"หลัง","Dumbbell Row":"หลัง","Chest Supported Row":"หลัง","Straight Arm Pulldown":"หลัง",
@@ -19,10 +20,44 @@
   const GROUPS = ["อก","หลัง","ไหล่","แขนหน้า","แขนหลัง","ขา","แกนกลาง"];
   const COLORS = ["#78c995","#69a9d8","#b49be8","#e5ad70","#df8c9c","#d2c56d","#73c8c1"];
   let setChart = null, volumeChart = null, weeks = [];
+  let alertSettings = {minSets:6,maxSets:20,maxDays:3};
 
   function dateOf(row){return String(row.workout_on||row.created_at||"").slice(0,10);}
   function key(d){return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");}
   function monday(d){const x=new Date(d);x.setHours(12,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x;}
+  function loadAlertSettings(){
+    try{
+      const saved=JSON.parse(localStorage.getItem(TARGET_KEY)||"{}");
+      alertSettings={minSets:Math.max(0,Math.min(30,Number(saved.minSets??6))),maxSets:Math.max(1,Math.min(40,Number(saved.maxSets??20))),maxDays:Math.max(1,Math.min(7,Number(saved.maxDays??3)))};
+    }catch(_){}
+    if(alertSettings.maxSets<alertSettings.minSets)alertSettings.maxSets=alertSettings.minSets;
+    $("muscle-min-sets").value=alertSettings.minSets;
+    $("muscle-max-sets").value=alertSettings.maxSets;
+    $("muscle-max-days").value=alertSettings.maxDays;
+  }
+  function saveAlertSettings(){
+    const min=Math.max(0,Math.min(30,Number($("muscle-min-sets").value)||0));
+    const max=Math.max(1,Math.min(40,Number($("muscle-max-sets").value)||1));
+    const days=Math.max(1,Math.min(7,Number($("muscle-max-days").value)||1));
+    alertSettings={minSets:min,maxSets:Math.max(min,max),maxDays:days};
+    $("muscle-min-sets").value=alertSettings.minSets;
+    $("muscle-max-sets").value=alertSettings.maxSets;
+    $("muscle-max-days").value=alertSettings.maxDays;
+    localStorage.setItem(TARGET_KEY,JSON.stringify(alertSettings));
+    render();
+  }
+  function renderAlerts(totals,frequencies){
+    const target=$("muscle-alert-list");if(!target)return;
+    const alerts=[];
+    GROUPS.forEach(g=>{
+      const sets=totals[g],days=frequencies[g];
+      if(sets===0)alerts.push({kind:"neutral",title:g+" · ยังไม่ได้ฝึก",detail:"ไม่มีเซตที่บันทึกในสัปดาห์นี้"});
+      else if(sets<alertSettings.minSets)alerts.push({kind:"watch",title:g+" · ปริมาณต่ำกว่าเป้า",detail:sets+" เซต จากเป้าขั้นต่ำ "+alertSettings.minSets+" เซต/สัปดาห์"});
+      else if(sets>alertSettings.maxSets)alerts.push({kind:"review",title:g+" · ปริมาณสูงกว่าเกณฑ์ที่ตั้ง",detail:sets+" เซต เกินเกณฑ์ "+alertSettings.maxSets+" เซต/สัปดาห์ · ตรวจสอบการฟื้นตัว"});
+      if(days>alertSettings.maxDays)alerts.push({kind:"review",title:g+" · ความถี่สูงกว่าเกณฑ์",detail:days+" วัน/สัปดาห์ จากเกณฑ์ "+alertSettings.maxDays+" วัน"});
+    });
+    target.innerHTML=alerts.length?alerts.map(a=>'<div class="muscle-alert-item '+a.kind+'"><strong>'+a.title+'</strong><span>'+a.detail+'</span></div>').join(""):'<p class="muscle-alert-empty">ปริมาณและความถี่อยู่ในเกณฑ์ที่ตั้งไว้</p>';
+  }
   function getGroups(){
     const map={...BUILTIN};
     try{const custom=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");if(Array.isArray(custom))custom.forEach(x=>{if(x&&x.name&&x.group)map[x.name]=x.group;});}catch(_){}
@@ -69,6 +104,7 @@
     const volumes=Object.fromEntries(GROUPS.map(g=>[g,rows.reduce((n,r)=>n+(r.volume[g]||0),0)]));
     const frequencies=Object.fromEntries(GROUPS.map(g=>[g,new Set(rows.flatMap(r=>r.days[g]||[])).size]));
     const total=Object.values(totals).reduce((a,b)=>a+b,0);
+    renderAlerts(totals,frequencies);
     const active=GROUPS.filter(g=>totals[g]>0).length;
     $("muscle-total-sets").textContent=total.toLocaleString()+" เซต";
     $("muscle-active-groups").textContent=active+" / "+GROUPS.length+" กลุ่ม";
@@ -84,15 +120,17 @@
       volumeChart=new Chart(volumeCtx,{type:"bar",data:{labels:GROUPS,datasets:[{label:"Volume Load (kg)",data:GROUPS.map(g=>Math.round(volumes[g])),backgroundColor:COLORS,borderRadius:6}]},options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{color:"#8795a5"},grid:{color:"rgba(140,155,170,.1)"}},y:{ticks:{color:"#aab6c4"},grid:{display:false}}}}});
     }
     $("muscle-group-list").innerHTML=GROUPS.map((g,i)=>'<div class="muscle-group-row"><span class="muscle-group-dot" style="background:'+COLORS[i]+'"></span><strong>'+g+'</strong><span>'+totals[g]+' เซต</span><span>'+Math.round(volumes[g]).toLocaleString()+' kg</span><span>'+frequencies[g]+' วัน</span><div class="muscle-group-track"><i style="width:'+(total?totals[g]/Math.max(...Object.values(totals),1)*100:0)+'%;background:'+COLORS[i]+'"></i></div></div>').join("");
-    $("muscle-group-note").textContent=total?"จำนวนเซตนับเฉพาะเซตที่มี Reps · Volume Load คำนวณจาก Reps × Weight เฉพาะเซตที่มีน้ำหนัก · ความถี่นับจำนวนวันที่ฝึกกลุ่มนั้นอย่างน้อย 1 เซต":"ยังไม่มีข้อมูลการฝึกที่จัดกลุ่มได้ในสัปดาห์นี้";
+    $("muscle-group-note").textContent=total?"การแจ้งเตือนเป็นเกณฑ์ติดตามที่คุณปรับเอง ไม่ใช่การวินิจฉัยว่า Overtraining · Volume Load คำนวณจาก Reps × Weight เฉพาะเซตที่มีน้ำหนัก":"ยังไม่มีข้อมูลการฝึกที่จัดกลุ่มได้ในสัปดาห์นี้";
   }
   function install(){
     const page=$("page-workout");if(!page||$("muscle-group-analytics"))return;
     const panel=document.createElement("article");panel.id="muscle-group-analytics";panel.className="panel muscle-group-analytics-panel";
-    panel.innerHTML='<div class="workout-entry-heading"><div><span class="workout-section-step">04 / MUSCLE BALANCE</span><h3>Muscle Group Analytics</h3><p>ดูจำนวนเซต ปริมาณงาน และความถี่ในการฝึกแต่ละกลุ่มกล้ามเนื้อ</p></div></div><label class="muscle-week-picker">เลือกสัปดาห์<select id="muscle-week-select"></select></label><div class="muscle-group-kpis"><div><small>จำนวนเซตรวม</small><strong id="muscle-total-sets">—</strong></div><div><small>กลุ่มที่ได้ฝึก</small><strong id="muscle-active-groups">—</strong></div><div><small>วันฝึกทั้งหมด</small><strong id="muscle-training-days">—</strong></div></div><h4 class="muscle-chart-title">จำนวนเซตต่อกลุ่ม</h4><div class="muscle-group-chart-wrap"><canvas id="muscle-group-chart"></canvas></div><h4 class="muscle-chart-title">Training Volume · kg</h4><div class="muscle-group-chart-wrap"><canvas id="muscle-volume-chart"></canvas></div><div class="muscle-group-list-heading"><strong>รายละเอียดรายกลุ่ม</strong><span>เซต · Volume · ความถี่</span></div><div id="muscle-group-list" class="muscle-group-list"></div><p id="muscle-group-note" class="exercise-analytics-note"></p>';
+    panel.innerHTML='<div class="workout-entry-heading"><div><span class="workout-section-step">04 / MUSCLE BALANCE</span><h3>Muscle Group Analytics</h3><p>ดูจำนวนเซต ปริมาณงาน และความถี่ในการฝึกแต่ละกลุ่มกล้ามเนื้อ</p></div></div><label class="muscle-week-picker">เลือกสัปดาห์<select id="muscle-week-select"></select></label><div class="muscle-group-kpis"><div><small>จำนวนเซตรวม</small><strong id="muscle-total-sets">—</strong></div><div><small>กลุ่มที่ได้ฝึก</small><strong id="muscle-active-groups">—</strong></div><div><small>วันฝึกทั้งหมด</small><strong id="muscle-training-days">—</strong></div></div><h4 class="muscle-chart-title">จำนวนเซตต่อกลุ่ม</h4><div class="muscle-group-chart-wrap"><canvas id="muscle-group-chart"></canvas></div><h4 class="muscle-chart-title">Training Volume · kg</h4><div class="muscle-group-chart-wrap"><canvas id="muscle-volume-chart"></canvas></div><div class="muscle-group-list-heading"><strong>รายละเอียดรายกลุ่ม</strong><span>เซต · Volume · ความถี่</span></div><div id="muscle-group-list" class="muscle-group-list"></div><section class="muscle-alert-panel"><div class="muscle-group-list-heading"><strong>Training Balance Alerts</strong><span>ตั้งเกณฑ์ได้เอง</span></div><div class="muscle-alert-settings"><label>เซตขั้นต่ำ/สัปดาห์<input id="muscle-min-sets" type="number" min="0" max="30" step="1"></label><label>เซตสูงสุด/สัปดาห์<input id="muscle-max-sets" type="number" min="1" max="40" step="1"></label><label>วันฝึกสูงสุด/สัปดาห์<input id="muscle-max-days" type="number" min="1" max="7" step="1"></label><button type="button" id="muscle-save-settings">บันทึกเกณฑ์</button></div><p class="muscle-alert-disclaimer">ค่าเริ่มต้น 6–20 เซต และไม่เกิน 3 วันต่อกลุ่ม/สัปดาห์ เป็นเพียงจุดเริ่มต้นสำหรับติดตาม ไม่ใช่เป้าหมายที่เหมาะกับทุกคน</p><div id="muscle-alert-list" class="muscle-alert-list"></div></section><p id="muscle-group-note" class="exercise-analytics-note"></p>';
     const progression=$("exercise-analytics");
     if(progression)progression.insertAdjacentElement("afterend",panel);else page.appendChild(panel);
     $("muscle-week-select").addEventListener("change",render);
+    $("muscle-save-settings").addEventListener("click",saveAlertSettings);
+    loadAlertSettings();
     document.addEventListener("fitness-data-loaded",render);
     render();
   }
