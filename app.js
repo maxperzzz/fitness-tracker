@@ -378,9 +378,32 @@ function renderAll() {
     tableHtml(cache.body, [
       ["measured_on", "วันที่"],
       ["weight_kg", "น้ำหนัก kg"],
-      ["body_fat_pct", "Body Fat %"],
-      ["waist_cm", "รอบเอว cm"]
+      ["body_fat_pct", "Body Fat %"]
     ]);
+
+  const latestBody = [...cache.body].sort(
+    (a, b) => b.measured_on.localeCompare(a.measured_on)
+  )[0];
+
+  const bodyFat = latestBody?.body_fat_pct != null
+    ? num(latestBody.body_fat_pct)
+    : null;
+
+  $("body-current-weight").textContent =
+    latestBody ? num(latestBody.weight_kg).toFixed(1) : "—";
+
+  $("body-current-fat").textContent =
+    bodyFat != null ? bodyFat.toFixed(1) : "—";
+
+  $("body-fat-mass").textContent =
+    bodyFat != null
+      ? (num(latestBody.weight_kg) * bodyFat / 100).toFixed(1)
+      : "—";
+
+  $("body-lean-mass").textContent =
+    bodyFat != null
+      ? (num(latestBody.weight_kg) * (1 - bodyFat / 100)).toFixed(1)
+      : "—";
 
   /* Photo list */
 
@@ -1338,12 +1361,12 @@ $("workout-form").addEventListener("submit", async e => {
 
     const x = formObject(e.target);
 
-    await insert("workout_logs", {
-      workout_on: today(),
-      activity_type: x.type,
-      name: x.name,
-      duration_min: num(x.duration),
-      intensity: x.intensity,
+      await insert("body_metrics", {
+      measured_on: x.measured_on,
+      weight_kg: num(x.weight_kg),
+      body_fat_pct: x.body_fat_pct
+        ? num(x.body_fat_pct)
+        : null,
       notes: x.notes
     });
 
