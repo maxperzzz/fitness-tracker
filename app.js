@@ -341,13 +341,15 @@ function renderProteinFoodList() {
   $("protein-food-list").innerHTML = PROTEIN_FOODS.map(food => {
     const item = saved.find(x => x.id === food.id);
     const qty = item ? num(item.qty) : 0;
-    return `<div class="protein-food-row">
+    const icons = { whey: "🥤", chicken: "🍗", egg: "🥚", protein_milk: "🥛", soy_milk: "🫘", tuna: "🐟", greek_yogurt: "🥣", pork: "🍖" };
+    return `<div class="protein-food-row ${qty > 0 ? "selected" : ""}">
       <label class="protein-food-check">
         <input type="checkbox" data-protein-food="${food.id}" ${qty > 0 ? "checked" : ""}>
-        <span><strong>${food.name}</strong><small>${food.serving} · ประมาณ ${food.protein} g</small></span>
+        <span class="protein-food-icon">${icons[food.id] || "＋"}</span>
+        <span class="protein-food-info"><strong>${food.name}</strong><small>${food.serving} · ~${food.protein} g</small></span>
       </label>
-      <input class="protein-food-qty" type="number" min="0" max="20" step=".5"
-        data-protein-qty="${food.id}" value="${qty || 1}" aria-label="จำนวนหน่วย ${food.name}" ${qty > 0 ? "" : "disabled"}>
+      <label class="protein-qty-wrap"><small>จำนวน</small><input class="protein-food-qty" type="number" min="0" max="20" step=".5"
+        data-protein-qty="${food.id}" value="${qty || 1}" aria-label="จำนวนหน่วย ${food.name}" ${qty > 0 ? "" : "disabled"}></label>
     </div>`;
   }).join("");
   const custom = saved.find(x => x.id === "other");
@@ -407,6 +409,8 @@ function renderProteinTracker() {
     ? "ยังไม่ได้บันทึกวันนี้"
     : total >= target ? "ถึงเป้าหมายโปรตีนแล้ว" : "เหลืออีก " + remaining.toFixed(1) + " g";
   $("protein-daily-progress").style.width = Math.min(100, total / target * 100) + "%";
+  const percent = Math.round(total / target * 100);
+  $("protein-daily-percent").textContent = percent + "%";
 
   const weekDates = Array.from({ length: 7 }, (_, i) => shiftDate(6 - i));
   const weekRecords = weekDates.map(date => cache.protein.find(x => x.logged_on === date) || null);
