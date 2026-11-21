@@ -468,7 +468,10 @@ function renderAll() {
   const nutrition = nutritionForDay(d);
 
   const k = nutrition.kcal ?? 0;
-  const p = nutrition.protein ?? 0;
+  // Prefer the dedicated Protein Tracker entry for the selected dashboard date.
+  // If no separate protein entry exists, fall back to protein from food logs.
+  const proteinRecord = cache.protein.find(x => x.logged_on === d);
+  const p = proteinRecord ? num(proteinRecord.protein_g) : (nutrition.protein ?? 0);
 
   const c = foods.reduce(
     (a, x) => a + num(x.carbs_g), 0
