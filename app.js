@@ -454,7 +454,11 @@ function renderProteinTracker() {
 }
 
 function workoutHistoryHtml(records) {
-  const rows = (records || []).map(record => {
+  const sortedRecords = [...(records || [])].sort((a, b) =>
+    String(b.workout_on || "").localeCompare(String(a.workout_on || "")) ||
+    String(b.created_at || "").localeCompare(String(a.created_at || ""))
+  );
+  const rows = sortedRecords.map(record => {
     const raw = String(record.notes || "");
     const match = raw.match(/\\[WORKOUT_V2_JSON\\]([\\s\\S]*?)\\[\\/WORKOUT_V2_JSON\\]/);
     let exercises = [];
@@ -472,7 +476,7 @@ function workoutHistoryHtml(records) {
       : esc(legacy || "—");
     return `<tr><td>${esc(record.workout_on || "—")}</td><td>${esc(record.activity_type || "—")}</td><td>${esc(record.name || "—")}</td><td>${num(record.duration_min)} นาที</td><td class="workout-history-details">${details}</td></tr>`;
   }).join("");
-  return records?.length
+  return sortedRecords.length
     ? `<div class="table-wrap"><table><thead><tr><th>วันที่</th><th>ประเภท</th><th>กิจกรรม</th><th>เวลา</th><th>รายละเอียดท่าฝึก / แต่ละเซต</th></tr></thead><tbody>${rows}</tbody></table></div>`
     : "ยังไม่มีข้อมูล";
 }
