@@ -20,8 +20,7 @@
     ["คาร์ดิโอ / อื่น ๆ","Treadmill"],["คาร์ดิโอ / อื่น ๆ","Incline Walk"],["คาร์ดิโอ / อื่น ๆ","Stationary Bike"],["คาร์ดิโอ / อื่น ๆ","Elliptical"],["คาร์ดิโอ / อื่น ๆ","Ping Pong"]
   ];
 
-  const userKey = window.currentUser?.id || "default";
-  const storageKey = "fitness-custom-exercises:" + userKey;
+  const storageKey = "fitness-custom-exercises-v1";
   let customExercises = [];
   try { customExercises = JSON.parse(localStorage.getItem(storageKey) || "[]"); } catch (_) { customExercises = []; }
   if (!Array.isArray(customExercises)) customExercises = [];
