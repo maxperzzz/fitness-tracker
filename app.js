@@ -420,6 +420,22 @@ function renderAll() {
     : "ยังไม่มีรูปภาพ";
 }
 
+const BODY_GOAL_DEFAULTS = { weight: 70, fat: 16 };
+
+function getBodyGoals() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("fitness-body-goals") || "{}");
+    return {
+      weight: Number.isFinite(Number(saved.weight)) && Number(saved.weight) > 0
+        ? Number(saved.weight) : BODY_GOAL_DEFAULTS.weight,
+      fat: Number.isFinite(Number(saved.fat)) && Number(saved.fat) > 0 && Number(saved.fat) < 100
+        ? Number(saved.fat) : BODY_GOAL_DEFAULTS.fat
+    };
+  } catch {
+    return { ...BODY_GOAL_DEFAULTS };
+  }
+}
+
 function renderBodyProgress() {
 
   const records = [...cache.body].sort((a, b) =>
@@ -432,6 +448,7 @@ function renderBodyProgress() {
   const latest = records[records.length - 1];
   const firstFat = records.find(r => r.body_fat_pct != null);
   const latestFat = [...records].reverse().find(r => r.body_fat_pct != null);
+  const goals = getBodyGoals();
 
   const weightChange = first && latest
     ? num(latest.weight_kg) - num(first.weight_kg)
@@ -447,15 +464,74 @@ function renderBodyProgress() {
     return sign + value.toFixed(1) + " " + unit;
   };
 
-  $("body-weight-change").textContent =
-    formatChange(weightChange, "kg");
-
-  $("body-fat-change").textContent =
-    formatChange(fatChange, "จุด %");
-
+  $("body-weight-change").textContent = formatChange(weightChange, "kg");
+  $("body-fat-change").textContent = formatChange(fatChange, "จุด %");
   $("body-progress-period").textContent = first && latest
     ? first.measured_on + " ถึง " + latest.measured_on
     : "รอข้อมูลเพิ่มเติม";
+
+  const weightInput = $("body-goal-weight");
+  const fatInput = $("body-goal-fat");
+  if (weightInput && document.activeElement !== weightInput) weightInput.value = goals.weight;
+  if (fatInput && document.activeElement !== fatInput) fatInput.value = goals.fat;
+
+  const progress = (start, current, target) => {
+    if (start == null || current == null) return null;
+    const range = start - target;
+    if (Math.abs(range) < 0.000001) return current <= target ? 100 : 0;
+    return Math.max(0, Math.min(100, ((start - current) / range) * 100));
+  };
+
+  const updateGoal = (prefix, current, target, start, unit, lowerIsBetter = true) => {
+    const valueEl = $(prefix + "-goal-current");
+    const targetEl = $(prefix + "-goal-target");
+    const remainingEl = $(prefix + "-goal-remaining");
+    const barEl = $(prefix + "-goal-progress");
+    const percentEl = $(prefix + "-goal-percent");
+
+    if (!valueEl || !targetEl || !remainingEl || !barEl || !percentEl) return;
+
+    valueEl.textContent = current == null ? "—" : current.toFixed(1) + " " + unit;
+    targetEl.textContent = "เป้าหมาย " + target.toFixed(1) + " " + unit;
+
+    if (current == null || start == null) {
+      remainingEl.textContent = "ต้องมีข้อมูลอย่างน้อย 1 รายการ";
+      barEl.style.width = "0%";
+      percentEl.textContent = "—";
+      return;
+    }
+
+    const achieved = lowerIsBetter
+      ? progress(start, current, target)
+      : progress(current, target, start);
+
+    const remaining = lowerIsBetter
+      ? Math.max(0, current - target)
+      : Math.max(0, target - current);
+
+    remainingEl.textContent = remaining <= 0
+      ? "ถึงเป้าหมายแล้ว"
+      : "เหลืออีก " + remaining.toFixed(1) + " " + unit;
+
+    barEl.style.width = achieved.toFixed(1) + "%";
+    percentEl.textContent = achieved.toFixed(0) + "%";
+  };
+
+  updateGoal(
+    "body-weight",
+    latest ? num(latest.weight_kg) : null,
+    goals.weight,
+    first ? num(first.weight_kg) : null,
+    "kg"
+  );
+
+  updateGoal(
+    "body-fat",
+    latestFat ? num(latestFat.body_fat_pct) : null,
+    goals.fat,
+    firstFat ? num(firstFat.body_fat_pct) : null,
+    "%"
+  );
 
   const weightRecords = records.filter(r =>
     r.weight_kg != null && Number.isFinite(Number(r.weight_kg))
@@ -483,72 +559,60 @@ function renderBodyProgress() {
   const weightCanvas = $("body-weight-chart");
   const fatCanvas = $("body-fat-chart");
 
-  if (weightCanvas) {
-    if (weightRecords.length) {
-      analyticsCharts.bodyWeight = new Chart(weightCanvas, {
-        type: "line",
-        data: {
-          labels: makeLabels(weightRecords),
-          datasets: [{
-            label: "Weight (kg)",
-            data: weightRecords.map(r => num(r.weight_kg)),
-            borderColor: "#8bd7a8",
-            backgroundColor: "rgba(139,215,168,.12)",
-            fill: true,
-            tension: .3,
-            pointRadius: 4,
-            pointHoverRadius: 6
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false }
-          },
-          scales: {
-            x: { grid: { display: false } },
-            y: {
-              title: { display: true, text: "kg" }
-            }
-          }
+  if (weightCanvas && weightRecords.length) {
+    analyticsCharts.bodyWeight = new Chart(weightCanvas, {
+      type: "line",
+      data: {
+        labels: makeLabels(weightRecords),
+        datasets: [{
+          label: "Weight (kg)",
+          data: weightRecords.map(r => num(r.weight_kg)),
+          borderColor: "#8bd7a8",
+          backgroundColor: "rgba(139,215,168,.12)",
+          fill: true,
+          tension: .3,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false } },
+          y: { title: { display: true, text: "kg" } }
         }
-      });
-    }
+      }
+    });
   }
 
-  if (fatCanvas) {
-    if (fatRecords.length) {
-      analyticsCharts.bodyFat = new Chart(fatCanvas, {
-        type: "line",
-        data: {
-          labels: makeLabels(fatRecords),
-          datasets: [{
-            label: "Body Fat (%)",
-            data: fatRecords.map(r => num(r.body_fat_pct)),
-            borderColor: "#b8a4ff",
-            backgroundColor: "rgba(184,164,255,.12)",
-            fill: true,
-            tension: .3,
-            pointRadius: 4,
-            pointHoverRadius: 6
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false }
-          },
-          scales: {
-            x: { grid: { display: false } },
-            y: {
-              title: { display: true, text: "%" }
-            }
-          }
+  if (fatCanvas && fatRecords.length) {
+    analyticsCharts.bodyFat = new Chart(fatCanvas, {
+      type: "line",
+      data: {
+        labels: makeLabels(fatRecords),
+        datasets: [{
+          label: "Body Fat (%)",
+          data: fatRecords.map(r => num(r.body_fat_pct)),
+          borderColor: "#b8a4ff",
+          backgroundColor: "rgba(184,164,255,.12)",
+          fill: true,
+          tension: .3,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false } },
+          y: { title: { display: true, text: "%" } }
         }
-      });
-    }
+      }
+    });
   }
 
   $("body-weight-chart-note").textContent = weightRecords.length
@@ -559,7 +623,6 @@ function renderBodyProgress() {
     ? fatRecords.length + " จุดข้อมูล · อ้างอิงจากประวัติที่บันทึก"
     : "ยังไม่มีข้อมูล Body Fat สำหรับแสดงกราฟ";
 }
-
 /* =========================================================
    ANALYTICS CHARTS
    ========================================================= */
@@ -1613,6 +1676,26 @@ $("workout-form").addEventListener("submit", async e => {
   } catch (err) {
     toast(err.message, true);
   }
+});
+
+/* Body goal settings */
+$("save-body-goals").addEventListener("click", () => {
+  const weight = Number($("body-goal-weight").value);
+  const fat = Number($("body-goal-fat").value);
+
+  if (!Number.isFinite(weight) || weight < 1 || weight > 500) {
+    toast("กรุณากรอกน้ำหนักเป้าหมายให้ถูกต้อง", true);
+    return;
+  }
+
+  if (!Number.isFinite(fat) || fat < 1 || fat > 60) {
+    toast("กรุณากรอก Body Fat เป้าหมายระหว่าง 1–60%", true);
+    return;
+  }
+
+  localStorage.setItem("fitness-body-goals", JSON.stringify({ weight, fat }));
+  renderBodyProgress();
+  toast("บันทึกเป้าหมายร่างกายแล้ว");
 });
 
 /* Body form */
