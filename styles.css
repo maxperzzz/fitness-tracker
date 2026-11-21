@@ -820,3 +820,6 @@
 .workout-v2-custom-buttons{display:flex;gap:8px;margin-top:11px}
 .workout-v2-custom-buttons button{padding:9px 13px;font-size:11px}
 @media(max-width:520px){.workout-v2-actions{grid-template-columns:1fr}.workout-v2-custom-fields{grid-template-columns:1fr}}
+
+/* Cloud custom exercise library */
+.workout-v2-library{display:grid;gap:7px;margin-top:10px}.workout-v2-library-item{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#111820}.workout-v2-library-item>span{display:grid;gap:3px;flex:1;min-width:0}.workout-v2-library-item b{color:var(--text);font-size:11px;overflow-wrap:anywhere}.workout-v2-library-item small{color:var(--muted);font-size:9px}.workout-v2-library-item button{padding:6px 9px;border:1px solid var(--line);border-radius:7px;background:transparent;color:var(--muted);font-size:10px}.workout-v2-library-item button[data-delete-custom]{color:#e59b9b}.workout-v2-custom-status.is-warning{color:#e6b77c}
