@@ -807,3 +807,16 @@
 
 /* Workout history card refinement */
 .workout-card-list{grid-template-columns:1fr;gap:14px}.workout-history-card{padding:18px;border-color:#344354;background:linear-gradient(135deg,#202b37 0%,#171e27 72%)}.workout-card-top h4{font-size:18px}.workout-card-meta span{background:#273440;color:#b9c8d6;font-size:10px}.workout-card-exercise-list{gap:9px}.workout-card-exercise{padding:12px;background:rgba(10,16,23,.42)}.workout-card-exercise-title{display:flex;align-items:center;gap:9px;margin-bottom:10px}.workout-card-exercise-title>span{display:grid;place-items:center;width:25px;height:25px;flex:0 0 auto;border-radius:8px;background:#8bd7a81c;color:#9ce0b0;font-size:10px;font-weight:800}.workout-card-exercise-title>strong{color:#e8eef5;font-size:12px}.workout-card-exercise-title>small{margin-left:auto;color:#8192a3;font-size:9px;letter-spacing:.6px}.workout-card-sets{grid-template-columns:repeat(auto-fit,minmax(105px,1fr))}.workout-card-set{min-height:66px;padding:9px 10px;border:1px solid #2b3946;background:#1d2833}.workout-card-set b{color:#8bd7a8;font-size:9px;letter-spacing:.6px}.workout-card-set strong{color:#f0f4f8;font-size:14px}.workout-card-set strong small{color:#8999a9;font-size:8px}.workout-card-set span{color:#aab9c8;font-size:10px}.workout-card-legacy{padding:10px;border-radius:9px;background:#111820;white-space:pre-wrap;overflow-wrap:anywhere}@media(min-width:900px){.workout-card-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Custom workout exercise creator */
+.workout-v2-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.workout-v2-actions .workout-v2-add{margin-top:0}
+.workout-v2-custom-form{margin-top:12px;padding:14px;border:1px solid #3a5145;border-radius:12px;background:#18231e}
+.workout-v2-custom-form[hidden]{display:none}
+.workout-v2-custom-form>strong{display:block;margin-bottom:11px;color:#dcebe1;font-size:12px}
+.workout-v2-custom-fields{display:grid;grid-template-columns:1.3fr 1fr;gap:10px}
+.workout-v2-custom-fields label{display:grid;gap:6px;color:var(--muted);font-size:10px}
+.workout-v2-custom-fields input,.workout-v2-custom-fields select{width:100%;min-width:0;padding:10px;border:1px solid var(--line);border-radius:9px;background:#11161d;color:var(--text);font:inherit}
+.workout-v2-custom-buttons{display:flex;gap:8px;margin-top:11px}
+.workout-v2-custom-buttons button{padding:9px 13px;font-size:11px}
+@media(max-width:520px){.workout-v2-actions{grid-template-columns:1fr}.workout-v2-custom-fields{grid-template-columns:1fr}}
