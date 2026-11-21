@@ -158,6 +158,10 @@ function navigate(page) {
   if (page === "analytics") {
     renderAnalytics();
   }
+
+  if (page === "body") {
+    requestAnimationFrame(() => renderBodyProgress());
+  }
 }
 
 /* =========================================================
