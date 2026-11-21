@@ -723,3 +723,25 @@
 .workout-v2-add { margin-top:12px; width:100%; }
 .workout-v2-hint { margin-top:12px; }
 @media(max-width:650px) { .workout-v2-fields { grid-template-columns:repeat(2,minmax(0,1fr)); } .workout-v2-builder { padding:13px; } }
+
+
+/* Workout Tracker V2 - per-set layout and history */
+.workout-v2-name select { width:100%; min-width:0; padding:11px; border:1px solid var(--line); border-radius:9px; background:#11161d; color:var(--text); font:inherit; }
+.workout-v2-sets-heading { display:flex; justify-content:space-between; align-items:center; gap:10px; margin:14px 0 9px; color:var(--text); font-size:11px; }
+.workout-v2-sets-heading span { color:var(--muted); font-size:9px; }
+.workout-v2-sets { display:grid; gap:7px; }
+.workout-v2-set { display:grid; grid-template-columns:52px minmax(65px,1fr) minmax(95px,1.2fr) 30px; align-items:end; gap:8px; padding:8px; border:1px solid var(--line); border-radius:9px; background:#151b23; }
+.workout-v2-set-number { align-self:center; color:#9bdcaf; font-size:10px; font-weight:700; }
+.workout-v2-set label { display:grid; gap:5px; color:var(--muted); font-size:9px; }
+.workout-v2-set input { padding:8px!important; font-size:11px!important; }
+.workout-v2-remove-set { width:28px; height:32px; border:1px solid var(--line); border-radius:7px; background:transparent; color:#e59b9b; font-size:18px; }
+.workout-v2-add-set { width:100%; margin-top:8px; padding:8px!important; font-size:10px!important; }
+.workout-history-details { min-width:230px; white-space:normal!important; }
+.workout-history-exercise { margin:3px 0 8px; }
+.workout-history-exercise strong { display:block; color:var(--text); font-size:11px; }
+.workout-history-sets { display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
+.workout-history-set { display:inline-block; padding:4px 7px; border:1px solid var(--line); border-radius:7px; color:var(--muted); font-size:9px; }
+@media(max-width:560px) {
+ .workout-v2-set { grid-template-columns:46px minmax(58px,1fr) minmax(82px,1.2fr) 28px; gap:5px; padding:6px; }
+ .workout-v2-sets-heading { align-items:flex-start; flex-direction:column; }
+}
