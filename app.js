@@ -274,13 +274,16 @@ function nutritionForDay(dayKey) {
   const rows = cache.food.filter(
     x => x.logged_on === dayKey
   );
+  const dailyTotal = rows.filter(x => String(x.notes || "").includes("[DAILY_KCAL_TOTAL]"));
+  const foodRows = rows.filter(x => !String(x.notes || "").includes("[DAILY_KCAL_TOTAL]"));
 
-  /* Actual data takes priority */
-
+  /* Explicit daily total overrides summed food calories; macros still use item logs. */
   if (rows.length) {
     return {
-      kcal: rows.reduce((s, x) => s + num(x.calories), 0),
-      protein: rows.reduce((s, x) => s + num(x.protein_g), 0),
+      kcal: dailyTotal.length
+        ? num(dailyTotal[dailyTotal.length - 1].calories)
+        : foodRows.reduce((s, x) => s + num(x.calories), 0),
+      protein: foodRows.reduce((s, x) => s + num(x.protein_g), 0),
       source: "actual",
       sourceDate: dayKey
     };
@@ -527,7 +530,7 @@ function renderAll() {
         `<div class="list-row">
           ${esc(x.name)}
           <span class="muted">
-            ${num(x.calories)} kcal · ${num(x.protein_g)}g protein
+            ${num(x.calories)} kcal${String(x.notes || "").includes("[DAILY_KCAL_TOTAL]") ? " · ยอดรวมทั้งวัน" : " · " + num(x.protein_g) + "g protein"}
           </span>
         </div>`
       ).join("")
