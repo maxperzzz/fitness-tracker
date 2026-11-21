@@ -1266,6 +1266,7 @@ async function deleteBodyMetric(id) {
   } catch (err) {
     toast("ลบไม่สำเร็จ: " + err.message, true);
   }
+}
 
 /* =========================================================
    DELETE FOOD
