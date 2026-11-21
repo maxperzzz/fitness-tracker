@@ -320,6 +320,63 @@ function nutritionForDay(dayKey) {
    DASHBOARD
    ========================================================= */
 
+const PROTEIN_FOODS = [
+  { id: "whey", name: "Whey Protein", serving: "1 scoop", protein: 24 },
+  { id: "chicken", name: "อกไก่สุก", serving: "100 g", protein: 31 },
+  { id: "egg", name: "ไข่ไก่", serving: "1 ฟอง", protein: 6 },
+  { id: "protein_milk", name: "นมโปรตีน", serving: "1 ขวด", protein: 28 },
+  { id: "soy_milk", name: "น้ำเต้าหู้", serving: "250 ml", protein: 7 },
+  { id: "tuna", name: "ทูน่าในน้ำแร่", serving: "1 กระป๋องเล็ก (เนื้อ)", protein: 25 },
+  { id: "greek_yogurt", name: "กรีกโยเกิร์ต", serving: "1 ถ้วย", protein: 15 },
+  { id: "pork", name: "หมูไม่ติดมันสุก", serving: "100 g", protein: 27 }
+];
+
+function proteinItemsForDate() {
+  const record = cache.protein.find(x => x.logged_on === ($("protein-date").value || today()));
+  return Array.isArray(record?.protein_items) ? record.protein_items : [];
+}
+
+function renderProteinFoodList() {
+  const saved = proteinItemsForDate();
+  $("protein-food-list").innerHTML = PROTEIN_FOODS.map(food => {
+    const item = saved.find(x => x.id === food.id);
+    const qty = item ? num(item.qty) : 0;
+    return `<div class="protein-food-row">
+      <label class="protein-food-check">
+        <input type="checkbox" data-protein-food="${food.id}" ${qty > 0 ? "checked" : ""}>
+        <span><strong>${food.name}</strong><small>${food.serving} · ประมาณ ${food.protein} g</small></span>
+      </label>
+      <input class="protein-food-qty" type="number" min="0" max="20" step=".5"
+        data-protein-qty="${food.id}" value="${qty || 1}" aria-label="จำนวนหน่วย ${food.name}" ${qty > 0 ? "" : "disabled"}>
+    </div>`;
+  }).join("");
+  const custom = saved.find(x => x.id === "other");
+  $("protein-other-grams").value = custom ? num(custom.protein_g) : "";
+  updateProteinDraft();
+}
+
+function updateProteinDraft() {
+  let total = 0;
+  const items = [];
+  for (const food of PROTEIN_FOODS) {
+    const check = document.querySelector('[data-protein-food="' + food.id + '"]');
+    const qtyInput = document.querySelector('[data-protein-qty="' + food.id + '"]');
+    if (check?.checked) {
+      const qty = Math.max(0, Math.min(20, num(qtyInput.value)));
+      total += qty * food.protein;
+      items.push({ id: food.id, name: food.name, qty, protein_g: qty * food.protein });
+    }
+  }
+  const other = Math.max(0, Math.min(1000, num($("protein-other-grams").value)));
+  if (other > 0) {
+    total += other;
+    items.push({ id: "other", name: "โปรตีนอื่น", qty: 1, protein_g: other });
+  }
+  $("protein-grams").value = total.toFixed(1);
+  $("protein-draft-total").textContent = total.toFixed(1) + " g";
+  return { total, items };
+}
+
 function renderProteinTracker() {
   const dateInput = $("protein-date");
   const amountInput = $("protein-grams");
@@ -327,9 +384,7 @@ function renderProteinTracker() {
 
   const selectedDate = dateInput.value || today();
   const record = cache.protein.find(x => x.logged_on === selectedDate);
-  if (document.activeElement !== amountInput) {
-    amountInput.value = record ? num(record.protein_g) : "";
-  }
+  renderProteinFoodList();
 
   const latestBody = [...cache.body].sort(
     (a, b) => String(b.measured_on || "").localeCompare(String(a.measured_on || ""))
@@ -344,33 +399,23 @@ function renderProteinTracker() {
   $("protein-daily-target").textContent = target.toFixed(1) + " g";
   $("protein-daily-remaining").textContent = !record
     ? "ยังไม่ได้บันทึกวันนี้"
-    : total >= target
-      ? "ถึงเป้าหมายโปรตีนแล้ว"
-      : "เหลืออีก " + remaining.toFixed(1) + " g";
-  $("protein-daily-progress").style.width =
-    Math.min(100, total / target * 100) + "%";
+    : total >= target ? "ถึงเป้าหมายโปรตีนแล้ว" : "เหลืออีก " + remaining.toFixed(1) + " g";
+  $("protein-daily-progress").style.width = Math.min(100, total / target * 100) + "%";
 
   const weekDates = Array.from({ length: 7 }, (_, i) => shiftDate(6 - i));
-  const weekRecords = weekDates.map(date =>
-    cache.protein.find(x => x.logged_on === date) || null
-  );
+  const weekRecords = weekDates.map(date => cache.protein.find(x => x.logged_on === date) || null);
   const loggedRecords = weekRecords.filter(Boolean);
   const average = loggedRecords.length
-    ? loggedRecords.reduce((sum, x) => sum + num(x.protein_g), 0) / loggedRecords.length
-    : null;
+    ? loggedRecords.reduce((sum, x) => sum + num(x.protein_g), 0) / loggedRecords.length : null;
   const achievedDays = loggedRecords.filter(x => num(x.protein_g) >= target).length;
   const missingDays = 7 - loggedRecords.length;
 
-  $("protein-week-average").textContent =
-    average == null ? "—" : average.toFixed(1) + " g";
-  $("protein-week-average-note").textContent =
-    loggedRecords.length + " จาก 7 วันที่มีการบันทึก";
+  $("protein-week-average").textContent = average == null ? "—" : average.toFixed(1) + " g";
+  $("protein-week-average-note").textContent = loggedRecords.length + " จาก 7 วันที่มีการบันทึก";
   $("protein-week-achieved").textContent = achievedDays + " / 7";
-  $("protein-week-achieved-note").textContent =
-    missingDays ? "ยังไม่ได้บันทึก " + missingDays + " วัน" : "บันทึกครบ 7 วัน";
+  $("protein-week-achieved-note").textContent = missingDays ? "ยังไม่ได้บันทึก " + missingDays + " วัน" : "บันทึกครบ 7 วัน";
   $("protein-week-logged").textContent = loggedRecords.length + " / 7";
-  $("protein-week-logged-note").textContent =
-    missingDays ? "วันที่ไม่บันทึกไม่นับเป็น 0 g" : "ข้อมูลครบทุกวัน";
+  $("protein-week-logged-note").textContent = missingDays ? "วันที่ไม่บันทึกไม่นับเป็น 0 g" : "ข้อมูลครบทุกวัน";
 
   if (window.Chart && $("protein-week-chart")) {
     destroyChart("proteinWeek");
@@ -379,56 +424,24 @@ function renderProteinTracker() {
     analyticsCharts.proteinWeek = new Chart($("protein-week-chart"), {
       type: "bar",
       data: {
-        labels: weekDates.map(date => new Date(date + "T12:00:00").toLocaleDateString(
-          "th-TH", { day: "numeric", month: "short" }
-        )),
-        datasets: [{
-          label: "Protein (g)",
-          data: weekRecords.map(x => x ? num(x.protein_g) : null),
-          backgroundColor: "rgba(139,215,168,.72)",
-          borderColor: "#8bd7a8",
-          borderWidth: 1,
-          borderRadius: 6
-        }]
+        labels: weekDates.map(date => new Date(date + "T12:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short" })),
+        datasets: [{ label: "Protein (g)", data: weekRecords.map(x => x ? num(x.protein_g) : null),
+          backgroundColor: "rgba(139,215,168,.72)", borderColor: "#8bd7a8", borderWidth: 1, borderRadius: 6 }]
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: context => context.raw == null
-                ? "ยังไม่ได้บันทึก"
-                : "โปรตีน " + Number(context.raw).toFixed(1) + " g"
-            }
-          }
-        },
-        scales: {
-          x: { grid: { display: false } },
-          y: {
-            beginAtZero: true,
-            title: { display: true, text: "Protein (g)" }
-          }
-        }
-      }
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: context => context.raw == null ? "ยังไม่ได้บันทึก" : "โปรตีน " + Number(context.raw).toFixed(1) + " g" } } },
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true, title: { display: true, text: "Protein (g)" } } } }
     });
   }
-  $("protein-week-chart-note").textContent =
-    loggedRecords.length
-      ? "แสดงเฉพาะวันที่มีการบันทึก · เป้าหมาย " + target.toFixed(1) + " g/วัน"
-      : "ยังไม่มีข้อมูลในช่วง 7 วันที่ผ่านมา";
+  $("protein-week-chart-note").textContent = loggedRecords.length
+    ? "แสดงเฉพาะวันที่มีการบันทึก · เป้าหมาย " + target.toFixed(1) + " g/วัน"
+    : "ยังไม่มีข้อมูลในช่วง 7 วันที่ผ่านมา";
 
-  const sorted = [...cache.protein].sort(
-    (a, b) => String(b.logged_on || "").localeCompare(String(a.logged_on || ""))
-  );
+  const sorted = [...cache.protein].sort((a, b) => String(b.logged_on || "").localeCompare(String(a.logged_on || "")));
   $("protein-history").innerHTML = sorted.length
     ? `<table><thead><tr><th>วันที่</th><th>โปรตีนรวม</th><th>จัดการ</th></tr></thead><tbody>
-      ${sorted.map(x => `<tr>
-        <td>${esc(x.logged_on)}</td>
-        <td>${num(x.protein_g).toFixed(1)} g</td>
-        <td><button type="button" class="secondary" data-delete-protein="${esc(x.id)}">ลบ</button></td>
-      </tr>`).join("")}
+      ${sorted.map(x => `<tr><td>${esc(x.logged_on)}</td><td>${num(x.protein_g).toFixed(1)} g</td>
+      <td><button type="button" class="secondary" data-delete-protein="${esc(x.id)}">ลบ</button></td></tr>`).join("")}
       </tbody></table>`
     : "ยังไม่มีประวัติการบันทึกโปรตีน";
 }
@@ -2004,6 +2017,17 @@ $("body-form").addEventListener("submit", async e => {
 
 /* Protein tracker */
 $("protein-date").addEventListener("change", renderProteinTracker);
+$("protein-food-list").addEventListener("change", e => {
+  const id = e.target.dataset.proteinFood;
+  if (id) {
+    const qty = document.querySelector('[data-protein-qty="' + id + '"]');
+    qty.disabled = !e.target.checked;
+    if (e.target.checked && num(qty.value) <= 0) qty.value = 1;
+  }
+  updateProteinDraft();
+});
+$("protein-food-list").addEventListener("input", updateProteinDraft);
+$("protein-other-grams").addEventListener("input", updateProteinDraft);
 
 $("protein-form").addEventListener("submit", async e => {
   e.preventDefault();
@@ -2019,7 +2043,8 @@ $("protein-form").addEventListener("submit", async e => {
     const { error } = await db.from("protein_logs").upsert({
       user_id: currentUser.id,
       logged_on: loggedOn,
-      protein_g: protein
+      protein_g: protein,
+      protein_items: updateProteinDraft().items
     }, { onConflict: "user_id,logged_on" });
 
     if (error) throw error;
