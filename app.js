@@ -1170,6 +1170,46 @@ function tableHtml(data, cols) {
 }
 
 function foodTableHtml(data) {
+function foodTableHtml(data) {
+
+  if (!data.length) return "ยังไม่มีรายการอาหาร";
+
+  const cols = [
+    ["logged_on", "วันที่"],
+    ["meal", "มื้อ"],
+    ["name", "อาหาร"],
+    ["calories", "kcal"],
+    ["protein_g", "โปรตีน g"]
+  ];
+
+  return `
+    <table>
+      <thead>
+        <tr>
+          ${cols.map(c => `<th>${c[1]}</th>`).join("")}
+          <th>จัดการ</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data.slice(0, 30).map(r =>
+          `<tr>
+            ${cols.map(c =>
+              `<td>${esc(r[c[0]] ?? "—")}</td>`
+            ).join("")}
+            <td>
+              <button
+                type="button"
+                class="secondary"
+                data-delete-food="${esc(r.id)}"
+              >ลบ</button>
+            </td>
+          </tr>`
+        ).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
 function bodyTableHtml(data) {
 
   if (!data.length) return "ยังไม่มีข้อมูล";
@@ -1227,44 +1267,6 @@ async function deleteBodyMetric(id) {
   } catch (err) {
     toast("ลบไม่สำเร็จ: " + err.message, true);
   }
-}
-  if (!data.length) return "ยังไม่มีรายการอาหาร";
-
-  const cols = [
-    ["logged_on", "วันที่"],
-    ["meal", "มื้อ"],
-    ["name", "อาหาร"],
-    ["calories", "kcal"],
-    ["protein_g", "โปรตีน g"]
-  ];
-
-  return `
-    <table>
-      <thead>
-        <tr>
-          ${cols.map(c => `<th>${c[1]}</th>`).join("")}
-          <th>จัดการ</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${data.slice(0, 30).map(r =>
-          `<tr>
-            ${cols.map(c =>
-              `<td>${esc(r[c[0]] ?? "—")}</td>`
-            ).join("")}
-            <td>
-              <button
-                type="button"
-                class="secondary"
-                data-delete-food="${esc(r.id)}"
-              >ลบ</button>
-            </td>
-          </tr>`
-        ).join("")}
-      </tbody>
-    </table>
-  `;
-}
 
 /* =========================================================
    DELETE FOOD
