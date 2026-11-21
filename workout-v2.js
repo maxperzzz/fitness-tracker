@@ -20,6 +20,12 @@
     ["คาร์ดิโอ / อื่น ๆ","Treadmill"],["คาร์ดิโอ / อื่น ๆ","Incline Walk"],["คาร์ดิโอ / อื่น ๆ","Stationary Bike"],["คาร์ดิโอ / อื่น ๆ","Elliptical"],["คาร์ดิโอ / อื่น ๆ","Ping Pong"]
   ];
 
+  const userKey = window.currentUser?.id || "default";
+  const storageKey = "fitness-custom-exercises:" + userKey;
+  let customExercises = [];
+  try { customExercises = JSON.parse(localStorage.getItem(storageKey) || "[]"); } catch (_) { customExercises = []; }
+  if (!Array.isArray(customExercises)) customExercises = [];
+
   const builder = document.createElement("section");
   builder.id = "workout-v2-builder";
   builder.className = "workout-v2-builder wide";
@@ -30,7 +36,19 @@
       <span class="workout-v2-count" id="workout-v2-count">0 ท่า</span>
     </div>
     <div id="workout-v2-exercises" class="workout-v2-exercises"></div>
-    <button type="button" class="secondary workout-v2-add" id="workout-v2-add">＋ เพิ่มท่าออกกำลังกาย</button>
+    <div class="workout-v2-actions">
+      <button type="button" class="secondary workout-v2-add" id="workout-v2-add">＋ เพิ่มท่าออกกำลังกาย</button>
+      <button type="button" class="secondary workout-v2-custom-toggle" id="workout-v2-custom-toggle">＋ สร้างท่าใหม่</button>
+    </div>
+    <div class="workout-v2-custom-form" id="workout-v2-custom-form" hidden>
+      <strong>เพิ่มท่าออกกำลังกายของฉัน</strong>
+      <div class="workout-v2-custom-fields">
+        <label>ชื่อท่า<input id="workout-v2-custom-name" type="text" maxlength="60" placeholder="เช่น Cable Y Raise"></label>
+        <label>หมวดหมู่<select id="workout-v2-custom-group"><option>อก</option><option>หลัง</option><option>ไหล่</option><option>แขนหน้า</option><option>แขนหลัง</option><option>ขา</option><option>แกนกลาง</option><option>คาร์ดิโอ / อื่น ๆ</option><option>กำหนดเอง</option></select></label>
+      </div>
+      <div class="workout-v2-custom-buttons"><button type="button" class="primary" id="workout-v2-custom-save">บันทึกท่าใหม่</button><button type="button" class="secondary" id="workout-v2-custom-cancel">ยกเลิก</button></div>
+      <p class="workout-v2-hint">รายการท่าที่สร้างเองจะจำไว้ในเบราว์เซอร์นี้</p>
+    </div>
     <p class="workout-v2-hint">ข้อมูลจะถูกบันทึกในประวัติเดิม โดยไม่สร้างตารางใหม่และไม่กระทบข้อมูลเก่า</p>`;
   const notesLabel = notes.closest("label");
   if (notesLabel) notesLabel.insertAdjacentElement("beforebegin", builder);
@@ -43,6 +61,7 @@
   function options(selected = "") {
     const groups = {};
     EXERCISES.forEach(([group,name]) => (groups[group] ||= []).push(name));
+    customExercises.forEach(({group,name}) => (groups[group] ||= []).push(name));
     return '<option value="">เลือกท่าออกกำลังกาย</option>' + Object.entries(groups).map(([group,names]) =>
       '<optgroup label="' + esc(group) + '">' + names.map(name =>
         '<option value="' + esc(name) + '"' + (name === selected ? " selected" : "") + '>' + esc(name) + '</option>'
@@ -111,6 +130,31 @@
   }
 
   builder.querySelector("#workout-v2-add").addEventListener("click", () => addExercise());
+
+  const customForm = builder.querySelector("#workout-v2-custom-form");
+  const customName = builder.querySelector("#workout-v2-custom-name");
+  const customGroup = builder.querySelector("#workout-v2-custom-group");
+  builder.querySelector("#workout-v2-custom-toggle").addEventListener("click", () => {
+    customForm.hidden = !customForm.hidden;
+    if (!customForm.hidden) customName.focus();
+  });
+  builder.querySelector("#workout-v2-custom-cancel").addEventListener("click", () => {
+    customForm.hidden = true;
+    customName.value = "";
+  });
+  builder.querySelector("#workout-v2-custom-save").addEventListener("click", () => {
+    const name = customName.value.trim();
+    const group = customGroup.value;
+    if (!name) { customName.focus(); return; }
+    const exists = [...EXERCISES, ...customExercises].some(([g,n]) => n.toLowerCase() === name.toLowerCase());
+    if (exists) { customName.setCustomValidity("มีชื่อท่านี้อยู่แล้ว"); customName.reportValidity(); return; }
+    customName.setCustomValidity("");
+    customExercises.push({group,name});
+    localStorage.setItem(storageKey, JSON.stringify(customExercises));
+    customForm.hidden = true;
+    customName.value = "";
+    addExercise({name, sets:[{},{},{}]});
+  });
 
   // Build data before the existing app.js submit handler reads the form.
   form.addEventListener("submit", () => {
