@@ -36,7 +36,17 @@
         <button type="button" class="food-v2-tab" data-food-tab="photo" role="tab" aria-selected="false">▧ <span>ใช้รูปอาหาร</span></button>
       </div>
       <div class="food-v2-pane active" data-food-pane="search"></div>
-      <div class="food-v2-pane" data-food-pane="manual"></div>
+      <div class="food-v2-pane" data-food-pane="manual">
+        <article class="panel food-daily-total-panel">
+          <div class="food-v2-panel-heading"><div><span class="food-v2-eyebrow">QUICK DAILY LOG</span><h3>บันทึกแคลอรี่รวมทั้งวัน</h3>
+            <p>สำหรับวันที่ไม่ได้แยกรายการอาหาร กรอกยอดรวมคร่าว ๆ ได้เลย</p></div><span class="food-v2-step">OPTIONAL</span></div>
+          <form id="food-daily-total-form" class="food-daily-total-form">
+            <label>วันที่<input id="food-daily-total-date" name="logged_on" type="date" required></label>
+            <label>แคลอรี่รวมทั้งวัน (kcal)<input name="calories" type="number" min="0" step="1" placeholder="เช่น 2,100" required></label>
+            <button class="primary" type="submit">บันทึกยอดรวม</button>
+          </form>
+        </article>
+      </div>
       <div class="food-v2-pane" data-food-pane="photo">
         <article class="panel food-photo-panel">
           <div class="food-v2-panel-heading"><div><span class="food-v2-eyebrow">PHOTO ASSIST</span><h3>ใช้รูปช่วยบันทึกอาหาร</h3>
@@ -125,6 +135,31 @@
       activate("manual");
       form.scrollIntoView({behavior:"smooth",block:"center"});
       if (typeof toast === "function") toast("นำข้อมูลไปยังฟอร์มแล้ว ตรวจสอบก่อนบันทึก");
+    });
+
+    const dailyTotalForm = $("food-daily-total-form");
+    const dailyTotalDate = $("food-daily-total-date");
+    dailyTotalDate.value = new Date().toLocaleDateString("en-CA");
+    dailyTotalForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      const values = new FormData(dailyTotalForm);
+      try {
+        await insert("food_logs", {
+          logged_on: values.get("logged_on"),
+          meal: "Daily Total",
+          name: "ยอดแคลอรี่รวมทั้งวัน",
+          serving: "ทั้งวัน",
+          calories: Number(values.get("calories")),
+          protein_g: 0,
+          carbs_g: 0,
+          fat_g: 0,
+          notes: "[DAILY_KCAL_TOTAL] บันทึกแคลอรี่รวมโดยประมาณทั้งวัน"
+        });
+        dailyTotalForm.reset();
+        dailyTotalDate.value = new Date().toLocaleDateString("en-CA");
+      } catch (error) {
+        if (typeof toast === "function") toast("บันทึกไม่สำเร็จ: " + error.message, true);
+      }
     });
 
     // Keep search connectors and personal-food lookup operating on the original form.
