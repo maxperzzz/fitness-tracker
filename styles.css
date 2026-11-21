@@ -282,3 +282,11 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.body-composition-chart-panel {
+  margin-top: 14px;
+}
+.body-composition-chart-panel .chart-area {
+  height: 280px;
+}
