@@ -338,28 +338,26 @@ function proteinItemsForDate() {
 
 function renderProteinFoodList() {
   const saved = proteinItemsForDate();
+  const icons = { whey: "🥤", chicken: "🍗", egg: "🥚", protein_milk: "🥛", soy_milk: "🫘", tuna: "🐟", greek_yogurt: "🥣", pork: "🍖" };
   $("protein-food-list").innerHTML = PROTEIN_FOODS.map(food => {
     const item = saved.find(x => x.id === food.id);
     const qty = item ? num(item.qty) : 0;
-    const icons = { whey: "🥤", chicken: "🍗", egg: "🥚", protein_milk: "🥛", soy_milk: "🫘", tuna: "🐟", greek_yogurt: "🥣", pork: "🍖" };
-    return `<div class="protein-food-row ${qty > 0 ? "selected" : ""}">
-      <label class="protein-food-check">
-        <input type="checkbox" data-protein-food="${food.id}" ${qty > 0 ? "checked" : ""}>
-        <span class="protein-food-icon">${icons[food.id] || "＋"}</span>
-        <span class="protein-food-info"><strong>${food.name}</strong><small>${food.serving} · ~${food.protein} g</small></span>
-      </label>
-      <label class="protein-qty-wrap"><small>จำนวน</small><input class="protein-food-qty" type="number" min="0" max="20" step=".5"
-        data-protein-qty="${food.id}" value="${qty || 1}" aria-label="จำนวนหน่วย ${food.name}" ${qty > 0 ? "" : "disabled"}></label>
+    return `<div class="protein-food-row ${qty > 0 ? "selected" : ""}" data-protein-card="${food.id}"
+        role="checkbox" tabindex="0" aria-checked="${qty > 0}" aria-label="${food.name}, ${food.protein} กรัมต่อ ${food.serving}">
+      <div class="protein-food-top"><span class="protein-food-icon">${icons[food.id] || "＋"}</span><span class="protein-food-checkmark">${qty > 0 ? "✓" : "+"}</span></div>
+      <strong class="protein-food-name">${food.name}</strong>
+      <span class="protein-food-detail">${food.protein} g <i>/</i> ${food.serving}</span>
+      <div class="protein-qty-controls" ${qty > 0 ? "" : "hidden"}>
+        <button type="button" class="protein-qty-button" data-protein-action="minus" aria-label="ลดจำนวน">−</button>
+        <output data-protein-qty>${qty || 1}</output>
+        <button type="button" class="protein-qty-button" data-protein-action="plus" aria-label="เพิ่มจำนวน">+</button>
+      </div>
+      <span class="protein-food-hint" ${qty > 0 ? "hidden" : ""}>แตะเพื่อเลือก</span>
     </div>`;
   }).join("");
   const custom = saved.find(x => x.id === "other");
   const currentRecord = cache.protein.find(x => x.logged_on === ($("protein-date").value || today()));
-  // Preserve older daily totals that were saved before itemized selections existed.
-  $("protein-other-grams").value = custom
-    ? num(custom.protein_g)
-    : currentRecord && !saved.length
-      ? num(currentRecord.protein_g)
-      : "";
+  $("protein-other-grams").value = custom ? num(custom.protein_g) : currentRecord && !saved.length ? num(currentRecord.protein_g) : "";
   updateProteinDraft();
 }
 
@@ -367,10 +365,9 @@ function updateProteinDraft() {
   let total = 0;
   const items = [];
   for (const food of PROTEIN_FOODS) {
-    const check = document.querySelector('[data-protein-food="' + food.id + '"]');
-    const qtyInput = document.querySelector('[data-protein-qty="' + food.id + '"]');
-    if (check?.checked) {
-      const qty = Math.max(0, Math.min(20, num(qtyInput.value)));
+    const card = document.querySelector('[data-protein-card="' + food.id + '"]');
+    if (card?.classList.contains("selected")) {
+      const qty = Math.max(1, Math.min(20, num(card.querySelector("[data-protein-qty]").textContent)));
       total += qty * food.protein;
       items.push({ id: food.id, name: food.name, qty, protein_g: qty * food.protein });
     }
@@ -2027,17 +2024,34 @@ $("body-form").addEventListener("submit", async e => {
 
 /* Protein tracker */
 $("protein-date").addEventListener("change", renderProteinTracker);
-$("protein-food-list").addEventListener("change", e => {
-  const id = e.target.dataset.proteinFood;
-  if (id) {
-    const qty = document.querySelector('[data-protein-qty="' + id + '"]');
-    qty.disabled = !e.target.checked;
-    e.target.closest(".protein-food-row")?.classList.toggle("selected", e.target.checked);
-    if (e.target.checked && num(qty.value) <= 0) qty.value = 1;
-  }
+function toggleProteinCard(card) {
+  const active = !card.classList.contains("selected");
+  card.classList.toggle("selected", active);
+  card.setAttribute("aria-checked", String(active));
+  card.querySelector(".protein-qty-controls").hidden = !active;
+  card.querySelector(".protein-food-hint").hidden = active;
+  card.querySelector(".protein-food-checkmark").textContent = active ? "✓" : "+";
   updateProteinDraft();
+}
+$("protein-food-list").addEventListener("click", e => {
+  const action = e.target.closest("[data-protein-action]");
+  if (action) {
+    const card = action.closest(".protein-food-row");
+    const output = card.querySelector("[data-protein-qty]");
+    output.textContent = String(Math.max(1, Math.min(20, num(output.textContent) + (action.dataset.proteinAction === "plus" ? 1 : -1))));
+    updateProteinDraft();
+    return;
+  }
+  const card = e.target.closest("[data-protein-card]");
+  if (card) toggleProteinCard(card);
 });
-$("protein-food-list").addEventListener("input", updateProteinDraft);
+$("protein-food-list").addEventListener("keydown", e => {
+  const card = e.target.closest("[data-protein-card]");
+  if (card && (e.key === "Enter" || e.key === " ") && !e.target.closest("button")) {
+    e.preventDefault();
+    toggleProteinCard(card);
+  }
+});
 $("protein-other-grams").addEventListener("input", updateProteinDraft);
 
 $("protein-form").addEventListener("submit", async e => {
