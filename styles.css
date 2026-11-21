@@ -703,3 +703,23 @@
  .food-photo-fields { grid-template-columns:1fr; }
  .food-photo-preview img { width:76px; height:76px; }
 }
+
+
+/* Workout Tracker V2 */
+.workout-v2-builder { margin: 8px 0 18px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.018); }
+.workout-v2-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:15px; }
+.workout-v2-heading h4 { margin:4px 0 5px; font-size:16px; color:var(--text); }
+.workout-v2-heading p,.workout-v2-hint { margin:0; color:var(--muted); font-size:12px; line-height:1.6; }
+.workout-v2-eyebrow { color:#8bd7a8; font-size:10px; font-weight:800; letter-spacing:1.2px; }
+.workout-v2-count { flex:0 0 auto; padding:6px 10px; border:1px solid var(--line); border-radius:999px; color:var(--muted); font-size:11px; }
+.workout-v2-exercises { display:grid; gap:11px; }
+.workout-v2-exercise { padding:14px; border:1px solid var(--line); border-radius:12px; background:rgba(0,0,0,.12); }
+.workout-v2-exercise-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; color:var(--text); font-size:12px; }
+.workout-v2-remove { padding:5px 9px; border:1px solid var(--line); border-radius:8px; background:transparent; color:#e59b9b; font-size:11px; cursor:pointer; }
+.workout-v2-exercise label { display:grid; gap:6px; color:var(--muted); font-size:11px; }
+.workout-v2-exercise input { width:100%; min-width:0; padding:10px; border:1px solid var(--line); border-radius:9px; background:#11161d; color:var(--text); font:inherit; }
+.workout-v2-name { margin-bottom:10px; }
+.workout-v2-fields { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; }
+.workout-v2-add { margin-top:12px; width:100%; }
+.workout-v2-hint { margin-top:12px; }
+@media(max-width:650px) { .workout-v2-fields { grid-template-columns:repeat(2,minmax(0,1fr)); } .workout-v2-builder { padding:13px; } }
