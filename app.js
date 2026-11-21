@@ -455,23 +455,21 @@ function renderProteinTracker() {
 
 function workoutHistoryHtml(records) {
   const sortedRecords = [...(records || [])].sort((a, b) =>
-    String(b.workout_on || "").localeCompare(String(a.workout_on || "")) ||
-    String(b.created_at || "").localeCompare(String(a.created_at || ""))
+    String(b.workout_on || "").localeCompare(String(a.workout_on || "")) || String(b.created_at || "").localeCompare(String(a.created_at || ""))
   );
   if (!sortedRecords.length) return "ยังไม่มีข้อมูล";
-
   return `<div class="workout-card-list">${sortedRecords.map(record => {
     const raw = String(record.notes || "");
-    const match = raw.match(/\\[WORKOUT_V2_JSON\\]([\\s\\S]*?)\\[\\/WORKOUT_V2_JSON\\]/);
+    const match = raw.match(/\[WORKOUT_V2_JSON\]([\s\S]*?)\[\/WORKOUT_V2_JSON\]/);
     let exercises = [];
     if (match) { try { exercises = JSON.parse(match[1]); } catch (_) {} }
-    const legacy = raw.replace(/\\[WORKOUT_V2_JSON\\][\\s\\S]*?\\[\\/WORKOUT_V2_JSON\\]/g, "").trim();
+    const legacy = raw.replace(/\[WORKOUT_V2_JSON\][\s\S]*?\[\/WORKOUT_V2_JSON\]/g, "").trim();
     const setCount = exercises.reduce((sum, ex) => sum + (ex.sets || []).length, 0);
-    const exerciseHtml = exercises.length ? exercises.map(ex => {
-      const sets = (ex.sets || []).map((set, index) =>
-        `<span class="workout-card-set"><b>Set ${index + 1}</b><span>${esc(set.reps || "—")} reps</span><small>${set.weight !== "" && set.weight != null ? esc(set.weight) + " kg" : "ไม่ระบุน้ำหนัก"}</small></span>`
+    const exerciseHtml = exercises.length ? exercises.map((ex, index) => {
+      const sets = (ex.sets || []).map((set, setIndex) =>
+        `<div class="workout-card-set"><b>SET ${setIndex + 1}</b><strong>${esc(set.reps || "—")} <small>REPS</small></strong><span>${set.weight !== "" && set.weight != null ? esc(set.weight) + " kg" : "Bodyweight"}</span></div>`
       ).join("");
-      return `<div class="workout-card-exercise"><strong>${esc(ex.name)}</strong><div class="workout-card-sets">${sets}</div></div>`;
+      return `<section class="workout-card-exercise"><div class="workout-card-exercise-title"><span>${String(index + 1).padStart(2,"0")}</span><strong>${esc(ex.name)}</strong><small>${(ex.sets || []).length} SETS</small></div><div class="workout-card-sets">${sets}</div></section>`;
     }).join("") : `<p class="workout-card-legacy">${esc(legacy || "ไม่มีรายละเอียดท่าฝึก")}</p>`;
     return `<article class="workout-history-card" data-workout-card-id="${esc(record.id)}">
       <div class="workout-card-top"><div><span class="workout-card-date">${esc(record.workout_on || "ไม่ระบุวันที่")}</span><h4>${esc(record.name || "Workout")}</h4></div><span class="workout-card-duration">${num(record.duration_min)} นาที</span></div>
@@ -481,7 +479,6 @@ function workoutHistoryHtml(records) {
     </article>`;
   }).join("")}</div>`;
 }
-
 function renderAll() {
 
   const d = today();
