@@ -33,6 +33,7 @@
         <button class="nav-item active" data-page="workout">↗ <span>ออกกำลังกาย</span></button>
         <button class="nav-item" data-page="dashboard">▦ <span>ภาพรวม</span></button>
         <button class="nav-item" data-page="food">＋ <span>บันทึกอาหาร</span></button>
+        <button class="nav-item" data-page="protein">P <span>โปรตีน</span></button>
         <button class="nav-item" data-page="body">⌁ <span>ข้อมูลร่างกาย</span></button>
         <button class="nav-item" data-page="analytics">▥ <span>วิเคราะห์ผล</span></button>
         <button class="nav-item" data-page="photos">▧ <span>รูปภาพ</span></button>
@@ -70,6 +71,40 @@
           <button class="primary wide" type="submit">บันทึกอาหาร</button>
         </form></div>
         <article class="panel"><h3>รายการอาหารล่าสุด</h3><div id="food-list" class="table-wrap empty">ยังไม่มีข้อมูล</div></article>
+      </section>
+
+      <section id="page-protein" class="page hidden">
+        <div class="welcome">
+          <div>
+            <p class="eyebrow">DAILY PROTEIN TRACKER</p>
+            <h2>วันนี้ได้รับโปรตีนเท่าไร?</h2>
+            <p class="muted">บันทึกยอดโปรตีนรวมต่อวัน ไม่ต้องแยกมื้อหรือกรอกสารอาหารอื่น</p>
+          </div>
+        </div>
+        <div class="protein-dashboard panel">
+          <div class="protein-kpi">
+            <span>โปรตีนที่ได้รับวันนี้</span>
+            <strong><b id="protein-daily-total">0.0</b> <small>g</small></strong>
+            <div class="progress green"><i id="protein-daily-progress"></i></div>
+            <div class="protein-progress-meta">
+              <span id="protein-daily-remaining">ยังไม่ได้บันทึก</span>
+              <strong id="protein-daily-target">145 g</strong>
+            </div>
+          </div>
+        </div>
+        <div class="panel form-panel">
+          <h3>บันทึกโปรตีนรายวัน</h3>
+          <p class="muted">หนึ่งรายการต่อวัน หากบันทึกวันที่เดิมอีกครั้ง ระบบจะปรับยอดเป็นค่าใหม่</p>
+          <form id="protein-form" class="form-grid">
+            <label>วันที่<input id="protein-date" name="logged_on" type="date" required></label>
+            <label>โปรตีนรวม (กรัม)<input id="protein-grams" name="protein_g" type="number" min="0" max="1000" step=".1" required placeholder="เช่น 145"></label>
+            <button class="primary wide" type="submit">บันทึกโปรตีน</button>
+          </form>
+        </div>
+        <article class="panel">
+          <h3>ประวัติโปรตีนรายวัน</h3>
+          <div id="protein-history" class="table-wrap empty">ยังไม่มีประวัติการบันทึกโปรตีน</div>
+        </article>
       </section>
 
       <section id="page-workout" class="page">
@@ -287,6 +322,10 @@
           <label class="wide">คำอธิบาย<input name="caption" placeholder="เช่น มื้อกลางวัน / หลังเวท"></label>
           <button class="primary wide" type="submit">อัปโหลดรูปภาพ</button>
         </form><p class="hint">รูปจะถูกบีบอัดก่อนอัปโหลด และจัดเก็บใน Supabase Storage แบบส่วนตัว</p></div>
+        <article class="panel">
+          <div class="panel-head"><h3>Body Progress Photos</h3><span class="muted">ภาพติดตามรูปร่าง</span></div>
+          <div id="body-photo-list" class="photo-grid empty">ยังไม่มีภาพ Body Progress</div>
+        </article>
         <article class="panel"><h3>รูปภาพล่าสุด</h3><div id="photo-list" class="photo-grid empty">ยังไม่มีรูปภาพ</div></article>
       </section>
 
