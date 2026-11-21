@@ -453,6 +453,30 @@ function renderProteinTracker() {
     : "ยังไม่มีประวัติการบันทึกโปรตีน";
 }
 
+function workoutHistoryHtml(records) {
+  const rows = (records || []).map(record => {
+    const raw = String(record.notes || "");
+    const match = raw.match(/\\[WORKOUT_V2_JSON\\]([\\s\\S]*?)\\[\\/WORKOUT_V2_JSON\\]/);
+    let exercises = [];
+    if (match) {
+      try { exercises = JSON.parse(match[1]); } catch (_) {}
+    }
+    const legacy = raw.replace(/\\[WORKOUT_V2_JSON\\][\\s\\S]*?\\[\\/WORKOUT_V2_JSON\\]/g, "").trim();
+    const details = exercises.length
+      ? exercises.map(ex => {
+          const sets = (ex.sets || []).map((set, i) =>
+            `<span class="workout-history-set">Set ${i + 1}: ${esc(set.reps || "—")} reps${set.weight !== "" && set.weight != null ? " · " + esc(set.weight) + " kg" : ""}</span>`
+          ).join("");
+          return `<div class="workout-history-exercise"><strong>${esc(ex.name)}</strong><div class="workout-history-sets">${sets}</div></div>`;
+        }).join("")
+      : esc(legacy || "—");
+    return `<tr><td>${esc(record.workout_on || "—")}</td><td>${esc(record.activity_type || "—")}</td><td>${esc(record.name || "—")}</td><td>${num(record.duration_min)} นาที</td><td class="workout-history-details">${details}</td></tr>`;
+  }).join("");
+  return records?.length
+    ? `<div class="table-wrap"><table><thead><tr><th>วันที่</th><th>ประเภท</th><th>กิจกรรม</th><th>เวลา</th><th>รายละเอียดท่าฝึก / แต่ละเซต</th></tr></thead><tbody>${rows}</tbody></table></div>`
+    : "ยังไม่มีข้อมูล";
+}
+
 function renderAll() {
 
   const d = today();
@@ -533,14 +557,7 @@ function renderAll() {
   $("food-list").innerHTML =
     foodTableHtml(cache.food);
 
-  $("workout-list").innerHTML =
-    tableHtml(cache.workouts, [
-      ["workout_on", "วันที่"],
-      ["activity_type", "ประเภท"],
-      ["name", "กิจกรรม"],
-      ["duration_min", "นาที"],
-      ["intensity", "ความหนัก"]
-    ]);
+  $("workout-list").innerHTML = workoutHistoryHtml(cache.workouts);
 
   $("body-list").innerHTML =
     bodyTableHtml(cache.body);
