@@ -203,7 +203,7 @@ async function loadAll() {
         };
       })
     );
-
+    document.dispatchEvent(new CustomEvent("fitness-data-loaded"));
     renderAll();
 
   } catch (e) {
