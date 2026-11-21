@@ -1872,6 +1872,10 @@ $("nav").addEventListener("click", e => {
   if (b) navigate(b.dataset.page);
 });
 
+$("dashboard-date")?.addEventListener("change", () => {
+  renderAll();
+});
+
 document.querySelector(".range-switch").addEventListener("click", e => {
 
   const b = e.target.closest("[data-range]");
